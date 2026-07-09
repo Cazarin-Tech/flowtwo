@@ -1,4 +1,18 @@
-export default function CompaniesPage() {
+interface Company {
+  id: number;
+  name: string;
+  businessType: string;
+  plan: string;
+  status: string;
+}
+
+export default async function CompaniesPage() {
+  const response = await fetch("http://localhost:3333/companies", {
+    cache: "no-store",
+  });
+
+  const companies: Company[] = await response.json();
+
   return (
     <main
       style={{
@@ -83,32 +97,25 @@ export default function CompaniesPage() {
           </thead>
 
           <tbody>
-            <tr style={trStyle}>
-              <td style={tdStyle}>FlowTech</td>
-              <td style={tdStyle}>Tecnologia</td>
-              <td style={tdStyle}>Pro</td>
-              <td style={{ ...tdStyle, color: "#22c55e", fontWeight: "bold" }}>
-                Ativa
-              </td>
-            </tr>
-
-            <tr style={trStyle}>
-              <td style={tdStyle}>Padaria São José</td>
-              <td style={tdStyle}>Padaria</td>
-              <td style={tdStyle}>Starter</td>
-              <td style={{ ...tdStyle, color: "#22c55e", fontWeight: "bold" }}>
-                Ativa
-              </td>
-            </tr>
-
-            <tr style={trStyle}>
-              <td style={tdStyle}>Barbearia Prime</td>
-              <td style={tdStyle}>Barbearia</td>
-              <td style={tdStyle}>Free</td>
-              <td style={{ ...tdStyle, color: "#facc15", fontWeight: "bold" }}>
-                Teste
-              </td>
-            </tr>
+            {companies.map((company) => (
+              <tr key={company.id} style={trStyle}>
+                <td style={tdStyle}>{company.name}</td>
+                <td style={tdStyle}>{company.businessType}</td>
+                <td style={tdStyle}>{company.plan}</td>
+                <td
+                  style={{
+                    ...tdStyle,
+                    color:
+                      company.status === "Ativa"
+                        ? "#22c55e"
+                        : "#facc15",
+                    fontWeight: "bold",
+                  }}
+                >
+                  {company.status}
+                </td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>
