@@ -29,3 +29,40 @@ companiesRoutes.post("/companies", (req, res) => {
     company,
   });
 });
+
+companiesRoutes.put("/companies/:id", (req, res) => {
+  const id = Number(req.params.id);
+
+  const companyIndex = companies.findIndex((company) => company.id === id);
+
+  if (companyIndex === -1) {
+    return res.status(404).json({ message: "Empresa não encontrada" });
+  }
+
+  companies[companyIndex] = {
+    ...companies[companyIndex],
+    ...req.body,
+  };
+
+  res.json({
+    message: "Empresa atualizada com sucesso!",
+    company: companies[companyIndex],
+  });
+});
+
+companiesRoutes.delete("/companies/:id", (req, res) => {
+  const id = Number(req.params.id);
+
+  const companyIndex = companies.findIndex((company) => company.id === id);
+
+  if (companyIndex === -1) {
+    return res.status(404).json({ message: "Empresa não encontrada" });
+  }
+
+  const deletedCompany = companies.splice(companyIndex, 1);
+
+  res.json({
+    message: "Empresa excluída com sucesso!",
+    company: deletedCompany[0],
+  });
+});
