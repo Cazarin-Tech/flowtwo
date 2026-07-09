@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 interface Company {
   id: number;
   name: string;
@@ -53,20 +55,22 @@ export default async function CompaniesPage() {
           </p>
         </div>
 
-        <button
-          style={{
-            backgroundColor: "#2563eb",
-            color: "#fff",
-            border: "none",
-            padding: "12px 22px",
-            borderRadius: "10px",
-            fontSize: "15px",
-            fontWeight: "bold",
-            cursor: "pointer",
-          }}
-        >
-          + Nova Empresa
-        </button>
+        <Link href="/companies/new">
+          <button
+            style={{
+              backgroundColor: "#2563eb",
+              color: "#fff",
+              border: "none",
+              padding: "12px 22px",
+              borderRadius: "10px",
+              fontSize: "15px",
+              fontWeight: "bold",
+              cursor: "pointer",
+            }}
+          >
+            + Nova Empresa
+          </button>
+        </Link>
       </div>
 
       <div
