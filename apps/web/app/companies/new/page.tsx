@@ -1,38 +1,50 @@
+"use client";
+
+import { useRouter } from "next/navigation";
+
 export default function NewCompanyPage() {
+  const router = useRouter();
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const form = event.currentTarget;
+    const formData = new FormData(form);
+
+    await fetch("http://localhost:3333/companies", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        name: formData.get("name"),
+        businessType: formData.get("businessType"),
+        plan: formData.get("plan"),
+        status: formData.get("status"),
+      }),
+    });
+
+    router.push("/companies");
+    router.refresh();
+  }
+
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        background: "#0f172a",
-        color: "#fff",
-        padding: "40px",
-        fontFamily: "Arial, sans-serif",
-      }}
-    >
-      <div
-        style={{
-          maxWidth: "600px",
-          margin: "0 auto",
-          background: "#1e293b",
-          padding: "30px",
-          borderRadius: "12px",
-          border: "1px solid #334155",
-        }}
-      >
+    <main style={mainStyle}>
+      <div style={cardStyle}>
         <h1 style={{ marginBottom: "25px" }}>Nova Empresa</h1>
 
-        <form style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
-          <input type="text" placeholder="Nome da empresa" style={inputStyle} />
+        <form onSubmit={handleSubmit} style={formStyle}>
+          <input name="name" type="text" placeholder="Nome da empresa" style={inputStyle} required />
 
-          <input type="text" placeholder="Ramo de atuação" style={inputStyle} />
+          <input name="businessType" type="text" placeholder="Ramo de atuação" style={inputStyle} required />
 
-          <select style={inputStyle}>
+          <select name="plan" style={inputStyle}>
             <option>Free</option>
             <option>Starter</option>
             <option>Pro</option>
           </select>
 
-          <select style={inputStyle}>
+          <select name="status" style={inputStyle}>
             <option>Ativa</option>
             <option>Teste</option>
             <option>Inativa</option>
@@ -46,6 +58,29 @@ export default function NewCompanyPage() {
     </main>
   );
 }
+
+const mainStyle = {
+  minHeight: "100vh",
+  background: "#0f172a",
+  color: "#fff",
+  padding: "40px",
+  fontFamily: "Arial, sans-serif",
+};
+
+const cardStyle = {
+  maxWidth: "600px",
+  margin: "0 auto",
+  background: "#1e293b",
+  padding: "30px",
+  borderRadius: "12px",
+  border: "1px solid #334155",
+};
+
+const formStyle = {
+  display: "flex",
+  flexDirection: "column",
+  gap: "18px",
+};
 
 const inputStyle = {
   padding: "12px",
