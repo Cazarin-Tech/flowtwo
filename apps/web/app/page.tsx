@@ -1,4 +1,14 @@
-export default function Home() {
+async function getTasks() {
+  const response = await fetch("http://localhost:3333/tasks", {
+    cache: "no-store",
+  });
+
+  return response.json();
+}
+
+export default async function Home() {
+  const tasks = await getTasks();
+
   return (
     <main
       style={{
@@ -122,7 +132,15 @@ export default function Home() {
           </div>
         ))}
       </section>
-
+      <section style={{ padding: "50px", textAlign: "center" }}>
+        <h2>Tarefas vindas da API</h2>
+        {tasks.map((task: any) => (
+          <div key={task.id}>
+            <h3>{task.title}</h3>
+            <p>Status: {task.status}</p>
+          </div>
+        ))}
+      </section>
       {/* Footer */}
       <footer
         style={{
