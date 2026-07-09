@@ -5,6 +5,7 @@ import healthRoutes from "./routes/health";
 import projectsRoutes from "./routes/projects";
 import tasksRoutes from "./routes/tasks";
 import usersRoutes from "./routes/users";
+import { companiesRoutes } from "./routes/companies";
 
 dotenv.config();
 
@@ -18,6 +19,7 @@ app.use(healthRoutes);
 app.use(projectsRoutes);
 app.use(tasksRoutes);
 app.use(usersRoutes);
+app.use(companiesRoutes);
 
 app.get("/", (req, res) => {
   res.json({ message: "API FlowTwo rodando!" });
