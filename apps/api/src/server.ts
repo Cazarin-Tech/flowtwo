@@ -36,6 +36,38 @@ app.get("/projects", (req, res) => {
   ];
   res.json(projects);
 });
+app.get("/tasks", (req, res) => {
+  res.json([
+    {
+      id: 1,
+      title: "Criar landing page",
+      projectId: 1,
+    },
+    {
+      id: 2,
+      title: "Conectar frontend com backend",
+      status: "em andamento",
+      projectId: 1,
+    },
+  ]);
+});
+
+app.get("/users", (req, res) => {
+  res.json([
+    {
+      id: 1,
+      name: "Giovani",
+      role: "Frontend",
+    },
+    {
+      id: 2,
+      name: "Matheus",
+      role: "Backend",
+    },
+  ]);
+});
+
+
 app.listen(port, () => {
   console.log(`API rodando em http://localhost:${port}`);
 });
