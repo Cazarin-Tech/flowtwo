@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 interface Company {
-  id: number;
+  id: string;
   name: string;
   businessType: string;
   plan: string;
@@ -97,6 +97,7 @@ export default async function CompaniesPage() {
               <th style={thStyle}>Ramo</th>
               <th style={thStyle}>Plano</th>
               <th style={thStyle}>Status</th>
+              <th style={thStyle}>Ações</th>
             </tr>
           </thead>
 
@@ -104,8 +105,11 @@ export default async function CompaniesPage() {
             {companies.map((company) => (
               <tr key={company.id} style={trStyle}>
                 <td style={tdStyle}>{company.name}</td>
+
                 <td style={tdStyle}>{company.businessType}</td>
+
                 <td style={tdStyle}>{company.plan}</td>
+
                 <td
                   style={{
                     ...tdStyle,
@@ -117,6 +121,46 @@ export default async function CompaniesPage() {
                   }}
                 >
                   {company.status}
+                </td>
+
+                <td style={tdStyle}>
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: "10px",
+                    }}
+                  >
+                    <button
+                      style={{
+                        backgroundColor: "#2563eb",
+                        color: "#fff",
+                        border: "none",
+                        padding: "8px 14px",
+                        borderRadius: "6px",
+                        cursor: "pointer",
+                      }}
+                    >
+                      Editar
+                    </button>
+
+                    <button
+                      style={{
+                        backgroundColor:
+                          company.status === "Ativa"
+                            ? "#dc2626"
+                            : "#16a34a",
+                        color: "#fff",
+                        border: "none",
+                        padding: "8px 14px",
+                        borderRadius: "6px",
+                        cursor: "pointer",
+                      }}
+                    >
+                      {company.status === "Ativa"
+                        ? "Desativar"
+                        : "Reativar"}
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
