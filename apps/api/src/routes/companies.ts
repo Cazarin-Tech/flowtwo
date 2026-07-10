@@ -2,6 +2,9 @@ import { Router } from "express";
 
 export const companiesRoutes = Router();
 
+const validPlans = ["Free", "Starter", "Pro", "Premium", "Sob Medida"];
+const validStatus = ["Ativa", "Inativa", "Bloqueada", "Teste"];
+
 const companies = [
   {
     id: 1,
@@ -12,14 +15,32 @@ const companies = [
   },
 ];
 
+function validateCompany(body: any) {
+  if (!body.name) return "Nome é obrigatório";
+  if (!body.businessType) return "Ramo é obrigatório";
+  if (!validPlans.includes(body.plan)) return "Plano inválido";
+  if (!validStatus.includes(body.status)) return "Status inválido";
+
+  return null;
+}
+
 companiesRoutes.get("/companies", (req, res) => {
   res.json(companies);
 });
 
 companiesRoutes.post("/companies", (req, res) => {
+  const error = validateCompany(req.body);
+
+  if (error) {
+    return res.status(400).json({ message: error });
+  }
+
   const company = {
     id: companies.length + 1,
-    ...req.body,
+    name: req.body.name,
+    businessType: req.body.businessType,
+    plan: req.body.plan,
+    status: req.body.status,
   };
 
   companies.push(company);
@@ -39,9 +60,18 @@ companiesRoutes.put("/companies/:id", (req, res) => {
     return res.status(404).json({ message: "Empresa não encontrada" });
   }
 
+  const error = validateCompany(req.body);
+
+  if (error) {
+    return res.status(400).json({ message: error });
+  }
+
   companies[companyIndex] = {
-    ...companies[companyIndex],
-    ...req.body,
+    id,
+    name: req.body.name,
+    businessType: req.body.businessType,
+    plan: req.body.plan,
+    status: req.body.status,
   };
 
   res.json({
