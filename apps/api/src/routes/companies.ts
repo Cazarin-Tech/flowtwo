@@ -1,19 +1,10 @@
 import { Router } from "express";
+import { prisma } from "../lib/prisma";
 
 export const companiesRoutes = Router();
 
 const validPlans = ["Free", "Starter", "Pro", "Premium", "Sob Medida"];
 const validStatus = ["Ativa", "Inativa", "Bloqueada", "Teste"];
-
-const companies = [
-  {
-    id: 1,
-    name: "FlowTech",
-    businessType: "Tecnologia",
-    plan: "Pro",
-    status: "Ativa",
-  },
-];
 
 function validateCompany(body: any) {
   if (!body.name) return "Nome é obrigatório";
@@ -24,75 +15,159 @@ function validateCompany(body: any) {
   return null;
 }
 
-companiesRoutes.get("/companies", (req, res) => {
-  res.json(companies);
+// Listar todas
+companiesRoutes.get("/companies", async (req, res) => {
+  try {
+    const companies = await prisma.company.findMany({
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+
+    return res.json(companies);
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      message: "Erro ao buscar empresas",
+    });
+  }
 });
 
-companiesRoutes.post("/companies", (req, res) => {
+// Buscar uma pelo ID
+companiesRoutes.get("/companies/:id", async (req, res) => {
+  try {
+    const company = await prisma.company.findUnique({
+      where: {
+        id: req.params.id,
+      },
+    });
+
+    if (!company) {
+      return res.status(404).json({
+        message: "Empresa não encontrada",
+      });
+    }
+
+    return res.json(company);
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      message: "Erro ao buscar empresa",
+    });
+  }
+});
+
+// Cadastrar
+companiesRoutes.post("/companies", async (req, res) => {
   const error = validateCompany(req.body);
 
   if (error) {
-    return res.status(400).json({ message: error });
+    return res.status(400).json({
+      message: error,
+    });
   }
 
-  const company = {
-    id: companies.length + 1,
-    name: req.body.name,
-    businessType: req.body.businessType,
-    plan: req.body.plan,
-    status: req.body.status,
-  };
+  try {
+    const company = await prisma.company.create({
+      data: {
+        name: req.body.name,
+        businessType: req.body.businessType,
+        plan: req.body.plan,
+        status: req.body.status,
+      },
+    });
 
-  companies.push(company);
+    return res.status(201).json({
+      message: "Empresa cadastrada com sucesso!",
+      company,
+    });
+  } catch (error) {
+    console.error(error);
 
-  res.status(201).json({
-    message: "Empresa cadastrada com sucesso!",
-    company,
-  });
+    return res.status(500).json({
+      message: "Erro ao cadastrar empresa",
+    });
+  }
 });
 
-companiesRoutes.put("/companies/:id", (req, res) => {
-  const id = Number(req.params.id);
-
-  const companyIndex = companies.findIndex((company) => company.id === id);
-
-  if (companyIndex === -1) {
-    return res.status(404).json({ message: "Empresa não encontrada" });
-  }
-
+// Editar
+companiesRoutes.put("/companies/:id", async (req, res) => {
   const error = validateCompany(req.body);
 
   if (error) {
-    return res.status(400).json({ message: error });
+    return res.status(400).json({
+      message: error,
+    });
   }
 
-  companies[companyIndex] = {
-    id,
-    name: req.body.name,
-    businessType: req.body.businessType,
-    plan: req.body.plan,
-    status: req.body.status,
-  };
+  try {
+    const company = await prisma.company.update({
+      where: {
+        id: req.params.id,
+      },
+      data: {
+        name: req.body.name,
+        businessType: req.body.businessType,
+        plan: req.body.plan,
+        status: req.body.status,
+      },
+    });
 
-  res.json({
-    message: "Empresa atualizada com sucesso!",
-    company: companies[companyIndex],
-  });
+    return res.json({
+      message: "Empresa atualizada com sucesso!",
+      company,
+    });
+  } catch {
+    return res.status(404).json({
+      message: "Empresa não encontrada",
+    });
+  }
 });
 
-companiesRoutes.delete("/companies/:id", (req, res) => {
-  const id = Number(req.params.id);
+// Desativar
+companiesRoutes.patch("/companies/:id/deactivate", async (req, res) => {
+  try {
+    const company = await prisma.company.update({
+      where: {
+        id: req.params.id,
+      },
+      data: {
+        status: "Inativa",
+      },
+    });
 
-  const companyIndex = companies.findIndex((company) => company.id === id);
-
-  if (companyIndex === -1) {
-    return res.status(404).json({ message: "Empresa não encontrada" });
+    return res.json({
+      message: "Empresa desativada com sucesso!",
+      company,
+    });
+  } catch {
+    return res.status(404).json({
+      message: "Empresa não encontrada",
+    });
   }
+});
 
-  const deletedCompany = companies.splice(companyIndex, 1);
+// Reativar
+companiesRoutes.patch("/companies/:id/activate", async (req, res) => {
+  try {
+    const company = await prisma.company.update({
+      where: {
+        id: req.params.id,
+      },
+      data: {
+        status: "Ativa",
+      },
+    });
 
-  res.json({
-    message: "Empresa excluída com sucesso!",
-    company: deletedCompany[0],
-  });
+    return res.json({
+      message: "Empresa reativada com sucesso!",
+      company,
+    });
+  } catch {
+    return res.status(404).json({
+      message: "Empresa não encontrada",
+    });
+  }
 });
