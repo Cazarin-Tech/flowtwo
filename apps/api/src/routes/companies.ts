@@ -171,3 +171,42 @@ companiesRoutes.patch("/companies/:id/activate", async (req, res) => {
     });
   }
 });
+
+// Dashboard
+companiesRoutes.get("/dashboard", async (req, res) => {
+  try {
+    const totalCompanies = await prisma.company.count();
+
+    const activeCompanies = await prisma.company.count({
+      where: {
+        status: "Ativa",
+      },
+    });
+
+    const inactiveCompanies = await prisma.company.count({
+      where: {
+        status: "Inativa",
+      },
+    });
+
+    const plans = await prisma.company.groupBy({
+      by: ["plan"],
+      _count: {
+        plan: true,
+      },
+    });
+
+    return res.json({
+      totalCompanies,
+      activeCompanies,
+      inactiveCompanies,
+      plans,
+    });
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      message: "Erro ao carregar dashboard",
+    });
+  }
+});
