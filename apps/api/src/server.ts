@@ -1,12 +1,13 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
+
 import healthRoutes from "./routes/health";
 import projectsRoutes from "./routes/projects";
 import tasksRoutes from "./routes/tasks";
-import usersRoutes from "./routes/users";
 import { companiesRoutes } from "./routes/companies";
 import { usersRoutes } from "./routes/users.routes";
+import { authRoutes } from "./routes/auth";
 
 dotenv.config();
 
@@ -20,19 +21,21 @@ app.use(
     allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
+
 app.use(express.json());
 
 app.use(healthRoutes);
 app.use(projectsRoutes);
 app.use(tasksRoutes);
-app.use(usersRoutes);
 app.use(companiesRoutes);
 app.use(usersRoutes);
+app.use(authRoutes);
 
-app.get("/", (req, res) => {
-  res.json({ message: "API FlowTwo rodando!" });
+app.get("/", (_req, res) => {
+  res.json({
+    message: "API FlowTwo rodando!",
+  });
 });
-
 
 app.listen(port, () => {
   console.log(`API rodando em http://localhost:${port}`);
