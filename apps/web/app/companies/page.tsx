@@ -1,4 +1,8 @@
+"use client";
+
 import Link from "next/link";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 interface Company {
   id: string;
@@ -8,12 +12,64 @@ interface Company {
   status: string;
 }
 
-export default async function CompaniesPage() {
-  const response = await fetch("http://localhost:3333/companies", {
-    cache: "no-store",
-  });
+export default function CompaniesPage() {
+  const router = useRouter();
 
-  const companies: Company[] = await response.json();
+  const [companies, setCompanies] = useState<Company[]>([]);
+
+  async function loadCompanies() {
+    const response = await fetch("http://localhost:3333/companies", {
+      cache: "no-store",
+    });
+
+    const data = await response.json();
+
+    setCompanies(data);
+  }
+
+  useEffect(() => {
+    loadCompanies();
+  }, []);
+
+  async function deactivateCompany(id: string) {
+    if (!confirm("Deseja desativar esta empresa?")) return;
+
+    const response = await fetch(
+      `http://localhost:3333/companies/${id}/deactivate`,
+      {
+        method: "PATCH",
+      }
+    );
+
+    if (!response.ok) {
+      alert("Erro ao desativar empresa.");
+      return;
+    }
+
+    alert("Empresa desativada com sucesso!");
+
+    await loadCompanies();
+    router.refresh();
+  }
+
+  async function activateCompany(id: string) {
+    const response = await fetch(
+      `http://localhost:3333/companies/${id}/activate`,
+      {
+        method: "PATCH",
+      }
+    );
+
+    if (!response.ok) {
+      alert("Erro ao reativar empresa.");
+      return;
+    }
+
+    alert("Empresa reativada com sucesso!");
+
+    await loadCompanies();
+    router.refresh();
+  }
 
   return (
     <main
@@ -105,9 +161,7 @@ export default async function CompaniesPage() {
             {companies.map((company) => (
               <tr key={company.id} style={trStyle}>
                 <td style={tdStyle}>{company.name}</td>
-
                 <td style={tdStyle}>{company.businessType}</td>
-
                 <td style={tdStyle}>{company.plan}</td>
 
                 <td
@@ -130,36 +184,50 @@ export default async function CompaniesPage() {
                       gap: "10px",
                     }}
                   >
-                    <button
-                      style={{
-                        backgroundColor: "#2563eb",
-                        color: "#fff",
-                        border: "none",
-                        padding: "8px 14px",
-                        borderRadius: "6px",
-                        cursor: "pointer",
-                      }}
-                    >
-                      Editar
-                    </button>
+                    <Link href={`/companies/${company.id}`}>
+                      <button
+                        style={{
+                          backgroundColor: "#2563eb",
+                          color: "#fff",
+                          border: "none",
+                          padding: "8px 14px",
+                          borderRadius: "6px",
+                          cursor: "pointer",
+                        }}
+                      >
+                        Editar
+                      </button>
+                    </Link>
 
-                    <button
-                      style={{
-                        backgroundColor:
-                          company.status === "Ativa"
-                            ? "#dc2626"
-                            : "#16a34a",
-                        color: "#fff",
-                        border: "none",
-                        padding: "8px 14px",
-                        borderRadius: "6px",
-                        cursor: "pointer",
-                      }}
-                    >
-                      {company.status === "Ativa"
-                        ? "Desativar"
-                        : "Reativar"}
-                    </button>
+                    {company.status === "Ativa" ? (
+                      <button
+                        onClick={() => deactivateCompany(company.id)}
+                        style={{
+                          backgroundColor: "#dc2626",
+                          color: "#fff",
+                          border: "none",
+                          padding: "8px 14px",
+                          borderRadius: "6px",
+                          cursor: "pointer",
+                        }}
+                      >
+                        Desativar
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => activateCompany(company.id)}
+                        style={{
+                          backgroundColor: "#16a34a",
+                          color: "#fff",
+                          border: "none",
+                          padding: "8px 14px",
+                          borderRadius: "6px",
+                          cursor: "pointer",
+                        }}
+                      >
+                        Reativar
+                      </button>
+                    )}
                   </div>
                 </td>
               </tr>
