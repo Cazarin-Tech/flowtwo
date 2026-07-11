@@ -1,3 +1,8 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+
 interface PageProps {
   params: Promise<{
     id: string;
@@ -12,32 +17,70 @@ interface Company {
   status: string;
 }
 
-export default async function EditCompanyPage({ params }: PageProps) {
-  const { id } = await params;
+export default function EditCompanyPage({ params }: PageProps) {
+  const router = useRouter();
 
-  const response = await fetch(`http://localhost:3333/companies/${id}`, {
-    cache: "no-store",
+  const [id, setId] = useState("");
+
+  const [company, setCompany] = useState<Company>({
+    id: "",
+    name: "",
+    businessType: "",
+    plan: "",
+    status: "Ativa",
   });
 
-  if (!response.ok) {
-    return (
-      <main
-        style={{
-          minHeight: "100vh",
-          backgroundColor: "#0f172a",
-          color: "#fff",
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          fontFamily: "Arial",
-        }}
-      >
-        <h1>Empresa não encontrada.</h1>
-      </main>
-    );
-  }
+  useEffect(() => {
+    async function loadCompany() {
+      const { id } = await params;
 
-  const company: Company = await response.json();
+      setId(id);
+
+      const response = await fetch(`http://localhost:3333/companies/${id}`, {
+        cache: "no-store",
+      });
+
+      if (!response.ok) {
+        alert("Empresa não encontrada.");
+        router.push("/companies");
+        return;
+      }
+
+      const data = await response.json();
+
+      setCompany(data);
+    }
+
+    loadCompany();
+  }, [params, router]);
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+
+    const response = await fetch(`http://localhost:3333/companies/${id}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        name: company.name,
+        businessType: company.businessType,
+        plan: company.plan,
+        status: company.status,
+      }),
+    });
+
+    if (!response.ok) {
+      alert("Erro ao atualizar empresa.");
+      return;
+    }
+
+    alert("Empresa atualizada com sucesso!");
+
+    router.push("/companies");
+
+    router.refresh();
+  }
 
   return (
     <main
@@ -58,6 +101,7 @@ export default async function EditCompanyPage({ params }: PageProps) {
       </h1>
 
       <form
+        onSubmit={handleSubmit}
         style={{
           display: "flex",
           flexDirection: "column",
@@ -69,7 +113,13 @@ export default async function EditCompanyPage({ params }: PageProps) {
           <label>Nome</label>
 
           <input
-            defaultValue={company.name}
+            value={company.name}
+            onChange={(e) =>
+              setCompany({
+                ...company,
+                name: e.target.value,
+              })
+            }
             style={inputStyle}
           />
         </div>
@@ -78,7 +128,13 @@ export default async function EditCompanyPage({ params }: PageProps) {
           <label>Ramo</label>
 
           <input
-            defaultValue={company.businessType}
+            value={company.businessType}
+            onChange={(e) =>
+              setCompany({
+                ...company,
+                businessType: e.target.value,
+              })
+            }
             style={inputStyle}
           />
         </div>
@@ -87,7 +143,13 @@ export default async function EditCompanyPage({ params }: PageProps) {
           <label>Plano</label>
 
           <input
-            defaultValue={company.plan}
+            value={company.plan}
+            onChange={(e) =>
+              setCompany({
+                ...company,
+                plan: e.target.value,
+              })
+            }
             style={inputStyle}
           />
         </div>
@@ -96,7 +158,13 @@ export default async function EditCompanyPage({ params }: PageProps) {
           <label>Status</label>
 
           <select
-            defaultValue={company.status}
+            value={company.status}
+            onChange={(e) =>
+              setCompany({
+                ...company,
+                status: e.target.value,
+              })
+            }
             style={inputStyle}
           >
             <option value="Ativa">Ativa</option>
