@@ -18,13 +18,31 @@ export default function CompaniesPage() {
   const [companies, setCompanies] = useState<Company[]>([]);
 
   async function loadCompanies() {
-    const response = await fetch("http://localhost:3333/companies", {
-      cache: "no-store",
-    });
+    try {
+      const response = await fetch("http://localhost:3333/companies", {
+        cache: "no-store",
+      });
 
-    const data = await response.json();
+      if (!response.ok) {
+        throw new Error("Erro ao buscar empresas");
+      }
 
-    setCompanies(data);
+      const data = await response.json();
+
+      console.log("Resposta da API:", data);
+
+      if (Array.isArray(data)) {
+        setCompanies(data);
+      } else if (Array.isArray(data.companies)) {
+        setCompanies(data.companies);
+      } else {
+        console.error("Resposta inválida:", data);
+        setCompanies([]);
+      }
+    } catch (error) {
+      console.error(error);
+      setCompanies([]);
+    }
   }
 
   useEffect(() => {
