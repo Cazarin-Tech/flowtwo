@@ -6,6 +6,7 @@ import projectsRoutes from "./routes/projects";
 import tasksRoutes from "./routes/tasks";
 import usersRoutes from "./routes/users";
 import { companiesRoutes } from "./routes/companies";
+import { usersRoutes } from "./routes/users.routes";
 
 dotenv.config();
 
@@ -25,6 +26,7 @@ app.use(projectsRoutes);
 app.use(tasksRoutes);
 app.use(usersRoutes);
 app.use(companiesRoutes);
+app.use(usersRoutes);
 
 app.get("/", (req, res) => {
   res.json({ message: "API FlowTwo rodando!" });
