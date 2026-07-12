@@ -1,22 +1,158 @@
 import { Router } from "express";
+import { prisma } from "../lib/prisma";
 
-const router = Router();
+const projectsRoutes = Router();
 
-router.get("/projects", (req, res) => {
-  const projects = [
-    {
-      id: 1,
-      name: "FlowTwo",
-      status: "Em desenvolvimento",
-    },
-    {
-      id: 2,
-      name: "Dashboard FlowTwo",
-      status: "Planejado",
-    },
-  ];
+const validStatus = ["Ativo", "Pausado", "Concluido"];
 
-  res.json(projects);
+function validateProject(body: any) {
+  if (!body.name?.trim()) {
+    return "O nome do projeto é obrigatório";
+  }
+
+  if (body.status && !validStatus.includes(body.status)) {
+    return "Status inválido";
+  }
+
+  return null;
+}
+
+// Listar todos os projetos
+projectsRoutes.get("/projects", async (_req, res) => {
+  try {
+    const projects = await prisma.project.findMany({
+      orderBy: {
+        createdAt: "desc",
+      },
+      include: {
+        tasks: true,
+      },
+    });
+
+    return res.json(projects);
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      message: "Erro ao buscar projetos",
+    });
+  }
 });
 
-export default router;
+// Buscar projeto por ID
+projectsRoutes.get("/projects/:id", async (req, res) => {
+  try {
+    const project = await prisma.project.findUnique({
+      where: {
+        id: req.params.id,
+      },
+      include: {
+        tasks: true,
+      },
+    });
+
+    if (!project) {
+      return res.status(404).json({
+        message: "Projeto não encontrado",
+      });
+    }
+
+    return res.json(project);
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      message: "Erro ao buscar projeto",
+    });
+  }
+});
+
+// Criar projeto
+projectsRoutes.post("/projects", async (req, res) => {
+  const validationError = validateProject(req.body);
+
+  if (validationError) {
+    return res.status(400).json({
+      message: validationError,
+    });
+  }
+
+  try {
+    const project = await prisma.project.create({
+      data: {
+        name: req.body.name.trim(),
+        description: req.body.description?.trim() || null,
+        status: req.body.status || "Ativo",
+      },
+    });
+
+    return res.status(201).json({
+      message: "Projeto criado com sucesso!",
+      project,
+    });
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      message: "Erro ao criar projeto",
+    });
+  }
+});
+
+// Editar projeto
+projectsRoutes.put("/projects/:id", async (req, res) => {
+  const validationError = validateProject(req.body);
+
+  if (validationError) {
+    return res.status(400).json({
+      message: validationError,
+    });
+  }
+
+  try {
+    const project = await prisma.project.update({
+      where: {
+        id: req.params.id,
+      },
+      data: {
+        name: req.body.name.trim(),
+        description: req.body.description?.trim() || null,
+        status: req.body.status || "Ativo",
+      },
+    });
+
+    return res.json({
+      message: "Projeto atualizado com sucesso!",
+      project,
+    });
+  } catch (error) {
+    console.error(error);
+
+    return res.status(404).json({
+      message: "Projeto não encontrado",
+    });
+  }
+});
+
+// Excluir projeto
+projectsRoutes.delete("/projects/:id", async (req, res) => {
+  try {
+    await prisma.project.delete({
+      where: {
+        id: req.params.id,
+      },
+    });
+
+    return res.json({
+      message: "Projeto excluído com sucesso!",
+    });
+  } catch (error) {
+    console.error(error);
+
+    return res.status(404).json({
+      message: "Projeto não encontrado",
+    });
+  }
+});
+
+export default projectsRoutes;
