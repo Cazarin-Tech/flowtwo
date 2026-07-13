@@ -64,10 +64,25 @@ projectsRoutes.get("/projects/dashboard", async (_req, res) => {
   }
 });
 
-// Listar todos os projetos
-projectsRoutes.get("/projects", async (_req, res) => {
+// Listar projetos com busca opcional
+projectsRoutes.get("/projects", async (req, res) => {
   try {
+    const search =
+      typeof req.query.search === "string"
+        ? req.query.search
+        : undefined;
+
     const projects = await prisma.project.findMany({
+      where: {
+        ...(search
+          ? {
+              name: {
+                contains: search,
+                mode: "insensitive",
+              },
+            }
+          : {}),
+      },
       orderBy: {
         createdAt: "desc",
       },
@@ -78,10 +93,11 @@ projectsRoutes.get("/projects", async (_req, res) => {
 
     return res.json(projects);
   } catch (error) {
+    console.error("========== ERRO AO BUSCAR PROJETOS ==========");
     console.error(error);
 
     return res.status(500).json({
-      message: "Erro ao buscar projetos",
+      message: error instanceof Error ? error.message : String(error),
     });
   }
 });
