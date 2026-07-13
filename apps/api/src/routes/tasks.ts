@@ -21,10 +21,30 @@ function validateTask(body: any) {
   return null;
 }
 
-// Listar todas as tarefas
-tasksRoutes.get("/tasks", async (_req, res) => {
+// Listar tarefas com filtros opcionais
+tasksRoutes.get("/tasks", async (req, res) => {
   try {
+    const status =
+      typeof req.query.status === "string"
+        ? req.query.status
+        : undefined;
+
+    const projectId =
+      typeof req.query.projectId === "string"
+        ? req.query.projectId
+        : undefined;
+
+    if (status && !validStatus.includes(status)) {
+      return res.status(400).json({
+        message: "Status inválido",
+      });
+    }
+
     const tasks = await prisma.task.findMany({
+      where: {
+        ...(status ? { status } : {}),
+        ...(projectId ? { projectId } : {}),
+      },
       orderBy: {
         createdAt: "desc",
       },

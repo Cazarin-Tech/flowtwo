@@ -17,6 +17,53 @@ function validateProject(body: any) {
   return null;
 }
 
+// Dashboard de projetos e tarefas
+projectsRoutes.get("/projects/dashboard", async (_req, res) => {
+  try {
+    const [
+      totalProjects,
+      totalTasks,
+      pendingTasks,
+      inProgressTasks,
+      completedTasks,
+    ] = await Promise.all([
+      prisma.project.count(),
+      prisma.task.count(),
+      prisma.task.count({
+        where: {
+          status: "Pendente",
+        },
+      }),
+      prisma.task.count({
+        where: {
+          status: "Em andamento",
+        },
+      }),
+      prisma.task.count({
+        where: {
+          status: "Concluida",
+        },
+      }),
+    ]);
+
+    return res.json({
+      totalProjects,
+      totalTasks,
+      tasksByStatus: {
+        pending: pendingTasks,
+        inProgress: inProgressTasks,
+        completed: completedTasks,
+      },
+    });
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      message: "Erro ao carregar dashboard de projetos e tarefas",
+    });
+  }
+});
+
 // Listar todos os projetos
 projectsRoutes.get("/projects", async (_req, res) => {
   try {
