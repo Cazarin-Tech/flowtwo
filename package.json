@@ -9,7 +9,13 @@
     "check-types": "turbo run check-types"
   },
   "devDependencies": {
+    "@types/bcrypt": "^6.0.0",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/cors": "^2.8.19",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/pg": "^8.20.0",
     "prettier": "^3.7.4",
+    "prisma": "^7.8.0",
     "turbo": "^2.10.4",
     "typescript": "5.9.2"
   },
@@ -20,5 +26,17 @@
     "apps/*",
     "packages/*"
   ],
-  "packageManager": "npm@11.16.0"
+  "packageManager": "npm@11.16.0",
+  "dependencies": {
+    "@prisma/adapter-pg": "^7.8.0",
+    "@prisma/client": "^7.8.0",
+    "bcrypt": "^6.0.0",
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.6",
+    "jsonwebtoken": "^9.0.3",
+    "next": "^15.5.20",
+    "pg": "^8.22.0",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7"
+  }
 }
