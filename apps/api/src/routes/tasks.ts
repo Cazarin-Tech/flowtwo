@@ -15,6 +15,9 @@ function validateTask(body: any) {
   if (!body.title?.trim()) {
     return "O título da tarefa é obrigatório";
   }
+  if (body.title.trim().length > 150) {
+  return "O título deve ter no máximo 150 caracteres";
+  }
 
   if (!body.projectId?.trim()) {
     return "O ID do projeto é obrigatório";
