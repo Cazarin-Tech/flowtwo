@@ -20,6 +20,10 @@ function validateTask(body: any) {
     return "O ID do projeto é obrigatório";
   }
 
+  if (!isValidUuid(body.projectId)) {
+    return "O ID do projeto é inválido";
+  }
+
   if (body.status && !validStatus.includes(body.status)) {
     return "Status inválido";
   }
