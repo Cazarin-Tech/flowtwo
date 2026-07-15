@@ -21,7 +21,7 @@ function validateTask(body: any) {
   return null;
 }
 
-// Listar tarefas com filtros e busca opcionais
+// Listar tarefas com filtros, busca e paginação
 tasksRoutes.get("/tasks", async (req, res) => {
   try {
     const status =
@@ -39,34 +39,76 @@ tasksRoutes.get("/tasks", async (req, res) => {
         ? req.query.search.trim()
         : undefined;
 
+    const pageValue =
+      typeof req.query.page === "string"
+        ? Number(req.query.page)
+        : 1;
+
+    const limitValue =
+      typeof req.query.limit === "string"
+        ? Number(req.query.limit)
+        : 10;
+
+    const page =
+      Number.isInteger(pageValue) && pageValue > 0
+        ? pageValue
+        : 1;
+
+    const limit =
+      Number.isInteger(limitValue) &&
+      limitValue > 0 &&
+      limitValue <= 100
+        ? limitValue
+        : 10;
+
+    const skip = (page - 1) * limit;
+
     if (status && !validStatus.includes(status)) {
       return res.status(400).json({
         message: "Status inválido",
       });
     }
 
-    const tasks = await prisma.task.findMany({
-      where: {
-        ...(status ? { status } : {}),
-        ...(projectId ? { projectId } : {}),
-        ...(search
-          ? {
-              title: {
-                contains: search,
-                mode: "insensitive",
-              },
-            }
-          : {}),
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-      include: {
-        project: true,
+    const where = {
+      ...(status ? { status } : {}),
+      ...(projectId ? { projectId } : {}),
+      ...(search
+        ? {
+            title: {
+              contains: search,
+              mode: "insensitive" as const,
+            },
+          }
+        : {}),
+    };
+
+    const [tasks, total] = await Promise.all([
+      prisma.task.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: {
+          createdAt: "desc",
+        },
+        include: {
+          project: true,
+        },
+      }),
+
+      prisma.task.count({
+        where,
+      }),
+    ]);
+
+    return res.json({
+      data: tasks,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
       },
     });
-
-    return res.json(tasks);
   } catch (error) {
     console.error(error);
 
