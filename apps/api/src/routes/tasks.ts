@@ -1,17 +1,31 @@
 import { Router } from "express";
 import { prisma } from "../lib/prisma";
+import { Prisma } from "@prisma/client";
 
 const tasksRoutes = Router();
 
 const validStatus = ["Pendente", "Em andamento", "Concluida"];
 
+function isValidUuid(value: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    value,
+  );
+}
+
 function validateTask(body: any) {
   if (!body.title?.trim()) {
     return "O título da tarefa é obrigatório";
   }
+  if (body.title.trim().length > 150) {
+  return "O título deve ter no máximo 150 caracteres";
+  }
 
   if (!body.projectId?.trim()) {
     return "O ID do projeto é obrigatório";
+  }
+
+  if (!isValidUuid(body.projectId)) {
+    return "O ID do projeto é inválido";
   }
 
   if (body.status && !validStatus.includes(body.status)) {
@@ -21,7 +35,38 @@ function validateTask(body: any) {
   return null;
 }
 
-// Listar tarefas com filtros e busca opcionais
+/**
+ * @swagger
+ * /tasks:
+ *   get:
+ *     summary: Lista tarefas
+ *     tags:
+ *       - Tarefas
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *       - in: query
+ *         name: sort
+ *         schema:
+ *           type: string
+ *           enum: [asc, desc]
+ *           default: desc
+ *     responses:
+ *       200:
+ *         description: Lista de tarefas retornada com sucesso
+ *       500:
+ *         description: Erro ao buscar tarefas
+ */
+
+// Listar tarefas com filtros, busca e paginação
 tasksRoutes.get("/tasks", async (req, res) => {
   try {
     const status =
@@ -39,34 +84,81 @@ tasksRoutes.get("/tasks", async (req, res) => {
         ? req.query.search.trim()
         : undefined;
 
+    const pageValue =
+      typeof req.query.page === "string"
+        ? Number(req.query.page)
+        : 1;
+
+    const limitValue =
+      typeof req.query.limit === "string"
+        ? Number(req.query.limit)
+        : 10;
+
+    const page =
+      Number.isInteger(pageValue) && pageValue > 0
+        ? pageValue
+        : 1;
+
+    const limit =
+      Number.isInteger(limitValue) &&
+      limitValue > 0 &&
+      limitValue <= 100
+        ? limitValue
+        : 10;
+
+    const sort =
+  req.query.sort === "asc" || req.query.sort === "desc"
+    ? req.query.sort
+    : "desc";
+
+    const skip = (page - 1) * limit;
+
     if (status && !validStatus.includes(status)) {
       return res.status(400).json({
         message: "Status inválido",
       });
     }
 
-    const tasks = await prisma.task.findMany({
-      where: {
-        ...(status ? { status } : {}),
-        ...(projectId ? { projectId } : {}),
-        ...(search
-          ? {
-              title: {
-                contains: search,
-                mode: "insensitive",
-              },
-            }
-          : {}),
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-      include: {
-        project: true,
+    const where = {
+      ...(status ? { status } : {}),
+      ...(projectId ? { projectId } : {}),
+      ...(search
+        ? {
+            title: {
+              contains: search,
+              mode: "insensitive" as const,
+            },
+          }
+        : {}),
+    };
+
+    const [tasks, total] = await Promise.all([
+      prisma.task.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: {
+          createdAt: sort,
+        },
+        include: {
+          project: true,
+        },
+      }),
+
+      prisma.task.count({
+        where,
+      }),
+    ]);
+
+    return res.json({
+      data: tasks,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
       },
     });
-
-    return res.json(tasks);
   } catch (error) {
     console.error(error);
 
@@ -76,12 +168,45 @@ tasksRoutes.get("/tasks", async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /tasks/{id}:
+ *   get:
+ *     summary: Busca uma tarefa pelo ID
+ *     tags:
+ *       - Tarefas
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Tarefa encontrada
+ *       400:
+ *         description: ID inválido
+ *       404:
+ *         description: Tarefa não encontrada
+ *       500:
+ *         description: Erro ao buscar tarefa
+ */
+
 // Buscar tarefa pelo ID
 tasksRoutes.get("/tasks/:id", async (req, res) => {
+  const id = req.params.id;
+
+  if (!isValidUuid(id)) {
+    return res.status(400).json({
+      message: "ID da tarefa inválido",
+    });
+  }
+
   try {
     const task = await prisma.task.findUnique({
       where: {
-        id: req.params.id,
+        id,
       },
       include: {
         project: true,
@@ -103,6 +228,47 @@ tasksRoutes.get("/tasks/:id", async (req, res) => {
     });
   }
 });
+
+/**
+ * @swagger
+ * /tasks:
+ *   post:
+ *     summary: Cria uma nova tarefa
+ *     tags:
+ *       - Tarefas
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - title
+ *               - projectId
+ *             properties:
+ *               title:
+ *                 type: string
+ *                 example: Criar tela de login
+ *               description:
+ *                 type: string
+ *                 example: Desenvolver formulário de autenticação
+ *               status:
+ *                 type: string
+ *                 enum: [Pendente, Em andamento, Concluida]
+ *                 example: Pendente
+ *               projectId:
+ *                 type: string
+ *                 format: uuid
+ *     responses:
+ *       201:
+ *         description: Tarefa criada com sucesso
+ *       400:
+ *         description: Dados inválidos
+ *       404:
+ *         description: Projeto não encontrado
+ *       500:
+ *         description: Erro ao criar tarefa
+ */
 
 // Criar tarefa
 tasksRoutes.post("/tasks", async (req, res) => {
@@ -149,8 +315,61 @@ tasksRoutes.post("/tasks", async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /tasks/{id}:
+ *   put:
+ *     summary: Atualiza uma tarefa
+ *     tags:
+ *       - Tarefas
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - title
+ *               - projectId
+ *             properties:
+ *               title:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *               status:
+ *                 type: string
+ *                 enum: [Pendente, Em andamento, Concluida]
+ *               projectId:
+ *                 type: string
+ *                 format: uuid
+ *     responses:
+ *       200:
+ *         description: Tarefa atualizada com sucesso
+ *       400:
+ *         description: Dados ou ID inválidos
+ *       404:
+ *         description: Tarefa ou projeto não encontrado
+ *       500:
+ *         description: Erro ao atualizar tarefa
+ */
+
 // Editar tarefa
 tasksRoutes.put("/tasks/:id", async (req, res) => {
+  const id = req.params.id;
+
+  if (!isValidUuid(id)) {
+    return res.status(400).json({
+      message: "ID da tarefa inválido",
+    });
+  }
+
   const validationError = validateTask(req.body);
 
   if (validationError) {
@@ -174,7 +393,7 @@ tasksRoutes.put("/tasks/:id", async (req, res) => {
 
     const task = await prisma.task.update({
       where: {
-        id: req.params.id,
+        id,
       },
       data: {
         title: req.body.title.trim(),
@@ -191,18 +410,35 @@ tasksRoutes.put("/tasks/:id", async (req, res) => {
   } catch (error) {
     console.error(error);
 
-    return res.status(404).json({
-      message: "Tarefa não encontrada",
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2025"
+    ) {
+      return res.status(404).json({
+        message: "Tarefa não encontrada",
+      });
+    }
+
+    return res.status(500).json({
+      message: "Erro ao atualizar tarefa",
     });
   }
 });
 
 // Excluir tarefa
 tasksRoutes.delete("/tasks/:id", async (req, res) => {
+  const id = req.params.id;
+
+  if (!isValidUuid(id)) {
+    return res.status(400).json({
+      message: "ID da tarefa inválido",
+    });
+  }
+
   try {
     await prisma.task.delete({
       where: {
-        id: req.params.id,
+        id,
       },
     });
 
@@ -212,8 +448,17 @@ tasksRoutes.delete("/tasks/:id", async (req, res) => {
   } catch (error) {
     console.error(error);
 
-    return res.status(404).json({
-      message: "Tarefa não encontrada",
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2025"
+    ) {
+      return res.status(404).json({
+        message: "Tarefa não encontrada",
+      });
+    }
+
+    return res.status(500).json({
+      message: "Erro ao excluir tarefa",
     });
   }
 });
