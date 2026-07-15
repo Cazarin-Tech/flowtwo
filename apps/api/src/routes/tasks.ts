@@ -21,7 +21,7 @@ function validateTask(body: any) {
   return null;
 }
 
-// Listar tarefas com filtros opcionais
+// Listar tarefas com filtros e busca opcionais
 tasksRoutes.get("/tasks", async (req, res) => {
   try {
     const status =
@@ -34,6 +34,11 @@ tasksRoutes.get("/tasks", async (req, res) => {
         ? req.query.projectId
         : undefined;
 
+    const search =
+      typeof req.query.search === "string"
+        ? req.query.search.trim()
+        : undefined;
+
     if (status && !validStatus.includes(status)) {
       return res.status(400).json({
         message: "Status inválido",
@@ -44,6 +49,14 @@ tasksRoutes.get("/tasks", async (req, res) => {
       where: {
         ...(status ? { status } : {}),
         ...(projectId ? { projectId } : {}),
+        ...(search
+          ? {
+              title: {
+                contains: search,
+                mode: "insensitive",
+              },
+            }
+          : {}),
       },
       orderBy: {
         createdAt: "desc",
