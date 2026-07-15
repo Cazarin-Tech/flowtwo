@@ -5,6 +5,12 @@ const tasksRoutes = Router();
 
 const validStatus = ["Pendente", "Em andamento", "Concluida"];
 
+function isValidUuid(value: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    value,
+  );
+}
+
 function validateTask(body: any) {
   if (!body.title?.trim()) {
     return "O título da tarefa é obrigatório";
@@ -125,10 +131,18 @@ tasksRoutes.get("/tasks", async (req, res) => {
 
 // Buscar tarefa pelo ID
 tasksRoutes.get("/tasks/:id", async (req, res) => {
+  const id = req.params.id;
+
+  if (!isValidUuid(id)) {
+    return res.status(400).json({
+      message: "ID da tarefa inválido",
+    });
+  }
+
   try {
     const task = await prisma.task.findUnique({
       where: {
-        id: req.params.id,
+        id,
       },
       include: {
         project: true,
@@ -198,6 +212,13 @@ tasksRoutes.post("/tasks", async (req, res) => {
 
 // Editar tarefa
 tasksRoutes.put("/tasks/:id", async (req, res) => {
+  const id = req.params.id;
+
+if (!isValidUuid(id)) {
+  return res.status(400).json({
+    message: "ID da tarefa inválido",
+  });
+}
   const validationError = validateTask(req.body);
 
   if (validationError) {
@@ -221,7 +242,7 @@ tasksRoutes.put("/tasks/:id", async (req, res) => {
 
     const task = await prisma.task.update({
       where: {
-        id: req.params.id,
+        id: id,
       },
       data: {
         title: req.body.title.trim(),
@@ -246,10 +267,18 @@ tasksRoutes.put("/tasks/:id", async (req, res) => {
 
 // Excluir tarefa
 tasksRoutes.delete("/tasks/:id", async (req, res) => {
+  const id = req.params.id;
+
+  if (!isValidUuid(id)) {
+    return res.status(400).json({
+      message: "ID da tarefa inválido",
+    });
+  }
+
   try {
     await prisma.task.delete({
       where: {
-        id: req.params.id,
+        id,
       },
     });
 
