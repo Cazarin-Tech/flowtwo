@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { prisma } from "../lib/prisma";
+import { Prisma } from "@prisma/client";
 
 const tasksRoutes = Router();
 
@@ -221,11 +222,12 @@ tasksRoutes.post("/tasks", async (req, res) => {
 tasksRoutes.put("/tasks/:id", async (req, res) => {
   const id = req.params.id;
 
-if (!isValidUuid(id)) {
-  return res.status(400).json({
-    message: "ID da tarefa inválido",
-  });
-}
+  if (!isValidUuid(id)) {
+    return res.status(400).json({
+      message: "ID da tarefa inválido",
+    });
+  }
+
   const validationError = validateTask(req.body);
 
   if (validationError) {
@@ -249,7 +251,7 @@ if (!isValidUuid(id)) {
 
     const task = await prisma.task.update({
       where: {
-        id: id,
+        id,
       },
       data: {
         title: req.body.title.trim(),
@@ -266,8 +268,17 @@ if (!isValidUuid(id)) {
   } catch (error) {
     console.error(error);
 
-    return res.status(404).json({
-      message: "Tarefa não encontrada",
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2025"
+    ) {
+      return res.status(404).json({
+        message: "Tarefa não encontrada",
+      });
+    }
+
+    return res.status(500).json({
+      message: "Erro ao atualizar tarefa",
     });
   }
 });
@@ -295,8 +306,17 @@ tasksRoutes.delete("/tasks/:id", async (req, res) => {
   } catch (error) {
     console.error(error);
 
-    return res.status(404).json({
-      message: "Tarefa não encontrada",
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2025"
+    ) {
+      return res.status(404).json({
+        message: "Tarefa não encontrada",
+      });
+    }
+
+    return res.status(500).json({
+      message: "Erro ao excluir tarefa",
     });
   }
 });
