@@ -105,6 +105,37 @@ projectsRoutes.get("/projects/dashboard", async (_req, res) => {
   }
 });
 
+// aqui entra a documentação do Swagger
+
+/**
+ * @swagger
+ * /projects:
+ *   get:
+ *     summary: Lista projetos
+ *     tags:
+ *       - Projetos
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *       - in: query
+ *         name: sort
+ *         schema:
+ *           type: string
+ *           enum: [asc, desc]
+ *           default: desc
+ *     responses:
+ *       200:
+ *         description: Lista de projetos retornada com sucesso
+ */
+
 // Listar projetos com paginação
 projectsRoutes.get("/projects", async (req, res) => {
   try {
@@ -170,6 +201,26 @@ projectsRoutes.get("/projects", async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /projects/{id}:
+ *   get:
+ *     summary: Busca um projeto pelo ID
+ *     tags:
+ *       - Projetos
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Projeto encontrado
+ *       404:
+ *         description: Projeto não encontrado
+ */
+
 // Buscar projeto por ID
 projectsRoutes.get("/projects/:id", async (req, res) => {
   const id = req.params.id;
@@ -205,6 +256,41 @@ projectsRoutes.get("/projects/:id", async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /projects:
+ *   post:
+ *     summary: Cria um novo projeto
+ *     tags:
+ *       - Projetos
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - name
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 example: Sistema FlowTwo
+ *               description:
+ *                 type: string
+ *                 example: Sistema de gerenciamento
+ *               status:
+ *                 type: string
+ *                 enum: [Ativo, Pausado, Concluido]
+ *                 example: Ativo
+ *     responses:
+ *       201:
+ *         description: Projeto criado com sucesso
+ *       400:
+ *         description: Dados inválidos
+ *       500:
+ *         description: Erro ao criar projeto
+ */
+
 // Criar projeto
 projectsRoutes.post("/projects", async (req, res) => {
   const validationError = validateProject(req.body);
@@ -236,6 +322,49 @@ projectsRoutes.post("/projects", async (req, res) => {
     });
   }
 });
+
+/**
+ * @swagger
+ * /projects/{id}:
+ *   put:
+ *     summary: Atualiza um projeto
+ *     tags:
+ *       - Projetos
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - name
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 example: Projeto atualizado
+ *               description:
+ *                 type: string
+ *                 example: Nova descrição
+ *               status:
+ *                 type: string
+ *                 enum: [Ativo, Pausado, Concluido]
+ *     responses:
+ *       200:
+ *         description: Projeto atualizado com sucesso
+ *       400:
+ *         description: Dados ou ID inválidos
+ *       404:
+ *         description: Projeto não encontrado
+ *       500:
+ *         description: Erro ao atualizar projeto
+ */
 
 // Editar projeto
 projectsRoutes.put("/projects/:id", async (req, res) => {
@@ -288,6 +417,31 @@ projectsRoutes.put("/projects/:id", async (req, res) => {
     });
   }
 });
+
+/**
+ * @swagger
+ * /projects/{id}:
+ *   delete:
+ *     summary: Exclui um projeto
+ *     tags:
+ *       - Projetos
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Projeto excluído com sucesso
+ *       400:
+ *         description: ID inválido
+ *       404:
+ *         description: Projeto não encontrado
+ *       500:
+ *         description: Erro ao excluir projeto
+ */
 
 // Excluir projeto
 projectsRoutes.delete("/projects/:id", async (req, res) => {

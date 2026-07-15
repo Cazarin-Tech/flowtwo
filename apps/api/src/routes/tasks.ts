@@ -35,6 +35,37 @@ function validateTask(body: any) {
   return null;
 }
 
+/**
+ * @swagger
+ * /tasks:
+ *   get:
+ *     summary: Lista tarefas
+ *     tags:
+ *       - Tarefas
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *       - in: query
+ *         name: sort
+ *         schema:
+ *           type: string
+ *           enum: [asc, desc]
+ *           default: desc
+ *     responses:
+ *       200:
+ *         description: Lista de tarefas retornada com sucesso
+ *       500:
+ *         description: Erro ao buscar tarefas
+ */
+
 // Listar tarefas com filtros, busca e paginação
 tasksRoutes.get("/tasks", async (req, res) => {
   try {
@@ -137,6 +168,31 @@ tasksRoutes.get("/tasks", async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /tasks/{id}:
+ *   get:
+ *     summary: Busca uma tarefa pelo ID
+ *     tags:
+ *       - Tarefas
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Tarefa encontrada
+ *       400:
+ *         description: ID inválido
+ *       404:
+ *         description: Tarefa não encontrada
+ *       500:
+ *         description: Erro ao buscar tarefa
+ */
+
 // Buscar tarefa pelo ID
 tasksRoutes.get("/tasks/:id", async (req, res) => {
   const id = req.params.id;
@@ -172,6 +228,47 @@ tasksRoutes.get("/tasks/:id", async (req, res) => {
     });
   }
 });
+
+/**
+ * @swagger
+ * /tasks:
+ *   post:
+ *     summary: Cria uma nova tarefa
+ *     tags:
+ *       - Tarefas
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - title
+ *               - projectId
+ *             properties:
+ *               title:
+ *                 type: string
+ *                 example: Criar tela de login
+ *               description:
+ *                 type: string
+ *                 example: Desenvolver formulário de autenticação
+ *               status:
+ *                 type: string
+ *                 enum: [Pendente, Em andamento, Concluida]
+ *                 example: Pendente
+ *               projectId:
+ *                 type: string
+ *                 format: uuid
+ *     responses:
+ *       201:
+ *         description: Tarefa criada com sucesso
+ *       400:
+ *         description: Dados inválidos
+ *       404:
+ *         description: Projeto não encontrado
+ *       500:
+ *         description: Erro ao criar tarefa
+ */
 
 // Criar tarefa
 tasksRoutes.post("/tasks", async (req, res) => {
@@ -217,6 +314,51 @@ tasksRoutes.post("/tasks", async (req, res) => {
     });
   }
 });
+
+/**
+ * @swagger
+ * /tasks/{id}:
+ *   put:
+ *     summary: Atualiza uma tarefa
+ *     tags:
+ *       - Tarefas
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - title
+ *               - projectId
+ *             properties:
+ *               title:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *               status:
+ *                 type: string
+ *                 enum: [Pendente, Em andamento, Concluida]
+ *               projectId:
+ *                 type: string
+ *                 format: uuid
+ *     responses:
+ *       200:
+ *         description: Tarefa atualizada com sucesso
+ *       400:
+ *         description: Dados ou ID inválidos
+ *       404:
+ *         description: Tarefa ou projeto não encontrado
+ *       500:
+ *         description: Erro ao atualizar tarefa
+ */
 
 // Editar tarefa
 tasksRoutes.put("/tasks/:id", async (req, res) => {
