@@ -5,6 +5,12 @@ const projectsRoutes = Router();
 
 const validStatus = ["Ativo", "Pausado", "Concluido"];
 
+function isValidUuid(value: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    value,
+  );
+}
+
 function validateProject(body: any) {
   if (!body.name?.trim()) {
     return "O nome do projeto é obrigatório";
@@ -165,10 +171,17 @@ projectsRoutes.get("/projects", async (req, res) => {
 
 // Buscar projeto por ID
 projectsRoutes.get("/projects/:id", async (req, res) => {
+  const id = req.params.id;
+
+  if (!isValidUuid(id)) {
+    return res.status(400).json({
+      message: "ID do projeto inválido",
+    });
+  }
   try {
     const project = await prisma.project.findUnique({
       where: {
-        id: req.params.id,
+        id,
       },
       include: {
         tasks: true,
@@ -225,6 +238,14 @@ projectsRoutes.post("/projects", async (req, res) => {
 
 // Editar projeto
 projectsRoutes.put("/projects/:id", async (req, res) => {
+  const id = req.params.id;
+
+  if (!isValidUuid(id)) {
+    return res.status(400).json({
+      message: "ID do projeto inválido",
+    });
+  }
+
   const validationError = validateProject(req.body);
 
   if (validationError) {
@@ -236,7 +257,7 @@ projectsRoutes.put("/projects/:id", async (req, res) => {
   try {
     const project = await prisma.project.update({
       where: {
-        id: req.params.id,
+        id,
       },
       data: {
         name: req.body.name.trim(),
@@ -260,10 +281,18 @@ projectsRoutes.put("/projects/:id", async (req, res) => {
 
 // Excluir projeto
 projectsRoutes.delete("/projects/:id", async (req, res) => {
+  const id = req.params.id;
+
+  if (!isValidUuid(id)) {
+    return res.status(400).json({
+      message: "ID do projeto inválido",
+    });
+  }
+
   try {
     await prisma.project.delete({
       where: {
-        id: req.params.id,
+        id,
       },
     });
 
