@@ -119,6 +119,11 @@ projectsRoutes.get("/projects", async (req, res) => {
         ? limitValue
         : 10;
 
+    const sort =
+  req.query.sort === "asc" || req.query.sort === "desc"
+    ? req.query.sort
+    : "desc";
+
     const skip = (page - 1) * limit;
 
     const [projects, total] = await Promise.all([
@@ -126,7 +131,7 @@ projectsRoutes.get("/projects", async (req, res) => {
         skip,
         take: limit,
         orderBy: {
-          createdAt: "desc",
+          createdAt: sort,
         },
         include: {
           tasks: true,
