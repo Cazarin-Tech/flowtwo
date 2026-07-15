@@ -94,19 +94,57 @@ projectsRoutes.get("/projects/dashboard", async (_req, res) => {
   }
 });
 
-// Listar todos os projetos
-projectsRoutes.get("/projects", async (_req, res) => {
+// Listar projetos com paginação
+projectsRoutes.get("/projects", async (req, res) => {
   try {
-    const projects = await prisma.project.findMany({
-      orderBy: {
-        createdAt: "desc",
-      },
-      include: {
-        tasks: true,
+    const pageValue =
+      typeof req.query.page === "string"
+        ? Number(req.query.page)
+        : 1;
+
+    const limitValue =
+      typeof req.query.limit === "string"
+        ? Number(req.query.limit)
+        : 10;
+
+    const page =
+      Number.isInteger(pageValue) && pageValue > 0
+        ? pageValue
+        : 1;
+
+    const limit =
+      Number.isInteger(limitValue) &&
+      limitValue > 0 &&
+      limitValue <= 100
+        ? limitValue
+        : 10;
+
+    const skip = (page - 1) * limit;
+
+    const [projects, total] = await Promise.all([
+      prisma.project.findMany({
+        skip,
+        take: limit,
+        orderBy: {
+          createdAt: "desc",
+        },
+        include: {
+          tasks: true,
+        },
+      }),
+
+      prisma.project.count(),
+    ]);
+
+    return res.json({
+      data: projects,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
       },
     });
-
-    return res.json(projects);
   } catch (error) {
     console.error(error);
 
