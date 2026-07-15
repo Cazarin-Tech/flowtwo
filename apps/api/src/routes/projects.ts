@@ -4,16 +4,31 @@ import { prisma } from "../lib/prisma";
 
 const projectsRoutes = Router();
 
-const validStatus = ["Ativo", "Pausado", "Concluido"];
+const validStatus = ["Ativo", "Pausado", "Concluido"] as const;
 
-function isValidUuid(value: string) {
+type ProjectStatus = (typeof validStatus)[number];
+
+type ProjectBody = {
+  name?: unknown;
+  description?: unknown;
+  status?: unknown;
+};
+
+function isValidUuid(value: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
     value,
   );
 }
 
-function validateProject(body: any) {
-  if (!body.name?.trim()) {
+function isValidProjectStatus(value: unknown): value is ProjectStatus {
+  return (
+    typeof value === "string" &&
+    validStatus.includes(value as ProjectStatus)
+  );
+}
+
+function validateProject(body: ProjectBody): string | null {
+  if (typeof body.name !== "string" || !body.name.trim()) {
     return "O nome do projeto é obrigatório";
   }
 
@@ -21,12 +36,55 @@ function validateProject(body: any) {
     return "O nome do projeto deve ter no máximo 150 caracteres";
   }
 
-  if (body.status && !validStatus.includes(body.status)) {
+  if (
+    body.description !== undefined &&
+    body.description !== null &&
+    typeof body.description !== "string"
+  ) {
+    return "A descrição deve ser um texto";
+  }
+
+  if (
+    body.status !== undefined &&
+    !isValidProjectStatus(body.status)
+  ) {
     return "Status inválido";
   }
 
   return null;
 }
+
+function getProjectStatus(status: unknown): ProjectStatus {
+  if (isValidProjectStatus(status)) {
+    return status;
+  }
+
+  return "Ativo";
+}
+
+function getProjectDescription(description: unknown): string | null {
+  if (typeof description !== "string") {
+    return null;
+  }
+
+  const normalizedDescription = description.trim();
+
+  return normalizedDescription || null;
+}
+
+/**
+ * @swagger
+ * /projects/dashboard:
+ *   get:
+ *     summary: Retorna o dashboard de projetos e tarefas
+ *     tags:
+ *       - Projetos
+ *     responses:
+ *       200:
+ *         description: Dashboard retornado com sucesso
+ *       500:
+ *         description: Erro ao carregar o dashboard
+ */
 
 // Dashboard de projetos e tarefas
 projectsRoutes.get("/projects/dashboard", async (_req, res) => {
@@ -84,12 +142,15 @@ projectsRoutes.get("/projects/dashboard", async (_req, res) => {
 
     return res.json({
       totalProjects,
+
       projectsByStatus: {
         active: activeProjects,
         paused: pausedProjects,
         completed: completedProjects,
       },
+
       totalTasks,
+
       tasksByStatus: {
         pending: pendingTasks,
         inProgress: inProgressTasks,
@@ -97,15 +158,16 @@ projectsRoutes.get("/projects/dashboard", async (_req, res) => {
       },
     });
   } catch (error) {
-    console.error(error);
+    console.error(
+      "Erro ao carregar dashboard de projetos e tarefas:",
+      error,
+    );
 
     return res.status(500).json({
       message: "Erro ao carregar dashboard de projetos e tarefas",
     });
   }
 });
-
-// aqui entra a documentação do Swagger
 
 /**
  * @swagger
@@ -134,6 +196,8 @@ projectsRoutes.get("/projects/dashboard", async (_req, res) => {
  *     responses:
  *       200:
  *         description: Lista de projetos retornada com sucesso
+ *       500:
+ *         description: Erro ao buscar projetos
  */
 
 // Listar projetos com paginação
@@ -161,10 +225,8 @@ projectsRoutes.get("/projects", async (req, res) => {
         ? limitValue
         : 10;
 
-    const sort =
-  req.query.sort === "asc" || req.query.sort === "desc"
-    ? req.query.sort
-    : "desc";
+    const sort: Prisma.SortOrder =
+      req.query.sort === "asc" ? "asc" : "desc";
 
     const skip = (page - 1) * limit;
 
@@ -172,9 +234,11 @@ projectsRoutes.get("/projects", async (req, res) => {
       prisma.project.findMany({
         skip,
         take: limit,
+
         orderBy: {
           createdAt: sort,
         },
+
         include: {
           tasks: true,
         },
@@ -185,6 +249,7 @@ projectsRoutes.get("/projects", async (req, res) => {
 
     return res.json({
       data: projects,
+
       pagination: {
         page,
         limit,
@@ -193,6 +258,7 @@ projectsRoutes.get("/projects", async (req, res) => {
       },
     });
   } catch (error) {
+    console.error("========== ERRO AO BUSCAR PROJETOS ==========");
     console.error(error);
 
     return res.status(500).json({
@@ -214,27 +280,34 @@ projectsRoutes.get("/projects", async (req, res) => {
  *         required: true
  *         schema:
  *           type: string
+ *           format: uuid
  *     responses:
  *       200:
  *         description: Projeto encontrado
+ *       400:
+ *         description: ID inválido
  *       404:
  *         description: Projeto não encontrado
+ *       500:
+ *         description: Erro ao buscar projeto
  */
 
 // Buscar projeto por ID
 projectsRoutes.get("/projects/:id", async (req, res) => {
-  const id = req.params.id;
+  const { id } = req.params;
 
-  if (!isValidUuid(id)) {
+  if (!id || !isValidUuid(id)) {
     return res.status(400).json({
       message: "ID do projeto inválido",
     });
   }
+
   try {
     const project = await prisma.project.findUnique({
       where: {
         id,
       },
+
       include: {
         tasks: true,
       },
@@ -248,7 +321,7 @@ projectsRoutes.get("/projects/:id", async (req, res) => {
 
     return res.json(project);
   } catch (error) {
-    console.error(error);
+    console.error("Erro ao buscar projeto:", error);
 
     return res.status(500).json({
       message: "Erro ao buscar projeto",
@@ -293,7 +366,9 @@ projectsRoutes.get("/projects/:id", async (req, res) => {
 
 // Criar projeto
 projectsRoutes.post("/projects", async (req, res) => {
-  const validationError = validateProject(req.body);
+  const body = req.body as ProjectBody;
+
+  const validationError = validateProject(body);
 
   if (validationError) {
     return res.status(400).json({
@@ -302,11 +377,15 @@ projectsRoutes.post("/projects", async (req, res) => {
   }
 
   try {
+    const name = (body.name as string).trim();
+    const description = getProjectDescription(body.description);
+    const status = getProjectStatus(body.status);
+
     const project = await prisma.project.create({
       data: {
-        name: req.body.name.trim(),
-        description: req.body.description?.trim() || null,
-        status: req.body.status || "Ativo",
+        name,
+        description,
+        status,
       },
     });
 
@@ -315,7 +394,7 @@ projectsRoutes.post("/projects", async (req, res) => {
       project,
     });
   } catch (error) {
-    console.error(error);
+    console.error("Erro ao criar projeto:", error);
 
     return res.status(500).json({
       message: "Erro ao criar projeto",
@@ -368,15 +447,17 @@ projectsRoutes.post("/projects", async (req, res) => {
 
 // Editar projeto
 projectsRoutes.put("/projects/:id", async (req, res) => {
-  const id = req.params.id;
+  const { id } = req.params;
 
-  if (!isValidUuid(id)) {
+  if (!id || !isValidUuid(id)) {
     return res.status(400).json({
       message: "ID do projeto inválido",
     });
   }
 
-  const validationError = validateProject(req.body);
+  const body = req.body as ProjectBody;
+
+  const validationError = validateProject(body);
 
   if (validationError) {
     return res.status(400).json({
@@ -385,14 +466,19 @@ projectsRoutes.put("/projects/:id", async (req, res) => {
   }
 
   try {
+    const name = (body.name as string).trim();
+    const description = getProjectDescription(body.description);
+    const status = getProjectStatus(body.status);
+
     const project = await prisma.project.update({
       where: {
         id,
       },
+
       data: {
-        name: req.body.name.trim(),
-        description: req.body.description?.trim() || null,
-        status: req.body.status || "Ativo",
+        name,
+        description,
+        status,
       },
     });
 
@@ -401,7 +487,7 @@ projectsRoutes.put("/projects/:id", async (req, res) => {
       project,
     });
   } catch (error) {
-    console.error(error);
+    console.error("Erro ao atualizar projeto:", error);
 
     if (
       error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -445,9 +531,9 @@ projectsRoutes.put("/projects/:id", async (req, res) => {
 
 // Excluir projeto
 projectsRoutes.delete("/projects/:id", async (req, res) => {
-  const id = req.params.id;
+  const { id } = req.params;
 
-  if (!isValidUuid(id)) {
+  if (!id || !isValidUuid(id)) {
     return res.status(400).json({
       message: "ID do projeto inválido",
     });
@@ -464,7 +550,7 @@ projectsRoutes.delete("/projects/:id", async (req, res) => {
       message: "Projeto excluído com sucesso!",
     });
   } catch (error) {
-    console.error(error);
+    console.error("Erro ao excluir projeto:", error);
 
     if (
       error instanceof Prisma.PrismaClientKnownRequestError &&
