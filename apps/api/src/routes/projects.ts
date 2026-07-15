@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { Prisma } from "@prisma/client";
 import { prisma } from "../lib/prisma";
 
 const projectsRoutes = Router();
@@ -302,8 +303,17 @@ projectsRoutes.delete("/projects/:id", async (req, res) => {
   } catch (error) {
     console.error(error);
 
-    return res.status(404).json({
-      message: "Projeto não encontrado",
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2025"
+    ) {
+      return res.status(404).json({
+        message: "Projeto não encontrado",
+      });
+    }
+
+    return res.status(500).json({
+      message: "Erro ao excluir projeto",
     });
   }
 });
