@@ -22,23 +22,48 @@ projectsRoutes.get("/projects/dashboard", async (_req, res) => {
   try {
     const [
       totalProjects,
+      activeProjects,
+      pausedProjects,
+      completedProjects,
       totalTasks,
       pendingTasks,
       inProgressTasks,
       completedTasks,
     ] = await Promise.all([
       prisma.project.count(),
+
+      prisma.project.count({
+        where: {
+          status: "Ativo",
+        },
+      }),
+
+      prisma.project.count({
+        where: {
+          status: "Pausado",
+        },
+      }),
+
+      prisma.project.count({
+        where: {
+          status: "Concluido",
+        },
+      }),
+
       prisma.task.count(),
+
       prisma.task.count({
         where: {
           status: "Pendente",
         },
       }),
+
       prisma.task.count({
         where: {
           status: "Em andamento",
         },
       }),
+
       prisma.task.count({
         where: {
           status: "Concluida",
@@ -48,6 +73,11 @@ projectsRoutes.get("/projects/dashboard", async (_req, res) => {
 
     return res.json({
       totalProjects,
+      projectsByStatus: {
+        active: activeProjects,
+        paused: pausedProjects,
+        completed: completedProjects,
+      },
       totalTasks,
       tasksByStatus: {
         pending: pendingTasks,
