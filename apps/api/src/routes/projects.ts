@@ -10,6 +10,10 @@ function validateProject(body: any) {
     return "O nome do projeto é obrigatório";
   }
 
+  if (body.name.trim().length > 150) {
+    return "O nome do projeto deve ter no máximo 150 caracteres";
+  }
+
   if (body.status && !validStatus.includes(body.status)) {
     return "Status inválido";
   }
