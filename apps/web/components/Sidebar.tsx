@@ -4,11 +4,11 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const links = [
-  { href: "/dashboard", label: "Dashboard", icon: "home" },
-  { href: "/companies", label: "Empresas", icon: "building" },
-  { href: "/users", label: "Usuários", icon: "users" },
-  { href: "/projects", label: "Projetos", icon: "folder" },
-  { href: "/tasks", label: "Tarefas", icon: "check" },
+  { href: "/dashboard", label: "🏠 Dashboard" },
+  { href: "/companies", label: "🏢 Empresas" },
+  { href: "/users", label: "👤 Usuários" },
+  { href: "/projects", label: "📁 Projetos" },
+  { href: "/tasks", label: "✅ Tarefas" },
 ];
 
 export default function Sidebar() {
@@ -19,147 +19,27 @@ export default function Sidebar() {
       style={{
         width: "260px",
         minHeight: "100vh",
-        padding: "24px 16px",
-        background: "#07101f",
-        borderRight: "1px solid rgba(148, 163, 184, 0.1)",
-        color: "#f8fafc",
-        position: "sticky",
-        top: 0,
-        display: "flex",
-        flexDirection: "column",
-        boxSizing: "border-box",
       }}
     >
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "12px",
-          padding: "4px 8px 28px",
-        }}
-      >
-        <div
-          style={{
-            width: "42px",
-            height: "42px",
-            borderRadius: "12px",
-            display: "grid",
-            placeItems: "center",
-            background: "linear-gradient(135deg, #2563eb, #7c3aed)",
-            boxShadow: "0 10px 30px rgba(37, 99, 235, 0.28)",
-          }}
-        >
-          <span style={{ fontSize: "18px", fontWeight: 800 }}>F2</span>
-        </div>
+      <h2 style={{ marginBottom: "30px" }}>FlowTwo</h2>
 
-        <div>
-          <strong
+      <nav style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+        {links.map((link) => (
+          <Link
+            key={link.href}
+            href={link.href}
             style={{
-              display: "block",
-              fontSize: "18px",
-              fontFamily: "Arial, sans-serif",
-              letterSpacing: "-0.02em",
+              textDecoration: "none",
+              color: pathname === link.href ? "#60a5fa" : "#fff",
+              padding: "12px",
+              borderRadius: "8px",
+              background:
+                pathname === link.href ? "#334155" : "transparent",
             }}
           >
-            FlowTwo
-          </strong>
-
-          <span
-            style={{
-              color: "#64748b",
-              fontSize: "12px",
-              fontFamily: "Arial, sans-serif",
-            }}
-          >
-            Gestão de projetos
-          </span>
-        </div>
-      </div>
-
-      <span
-        style={{
-          padding: "0 12px",
-          marginBottom: "10px",
-          color: "#475569",
-          fontSize: "10px",
-          fontWeight: 700,
-          letterSpacing: "0.15em",
-          textTransform: "uppercase",
-          fontFamily: "Arial, sans-serif",
-        }}
-      >
-        Navegação
-      </span>
-
-      <nav
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: "6px",
-        }}
-      >
-        {links.map((link) => {
-          const active =
-            pathname === link.href || pathname.startsWith(`${link.href}/`);
-
-          return (
-            <Link
-              key={link.href}
-              href={link.href}
-              style={{
-                position: "relative",
-                display: "flex",
-                alignItems: "center",
-                gap: "12px",
-                padding: "12px 13px",
-                borderRadius: "11px",
-                textDecoration: "none",
-                fontSize: "14px",
-                fontWeight: active ? 600 : 500,
-                fontFamily: "Arial, sans-serif",
-                color: active ? "#ffffff" : "#94a3b8",
-                background: active
-                  ? "rgba(37, 99, 235, 0.16)"
-                  : "transparent",
-                border: active
-                  ? "1px solid rgba(96, 165, 250, 0.2)"
-                  : "1px solid transparent",
-                transition: "background 0.2s, color 0.2s",
-              }}
-            >
-              {active && (
-                <span
-                  style={{
-                    position: "absolute",
-                    left: "-16px",
-                    width: "3px",
-                    height: "24px",
-                    borderRadius: "0 4px 4px 0",
-                    background: "#3b82f6",
-                  }}
-                />
-              )}
-
-              <span
-                style={{
-                  width: "32px",
-                  height: "32px",
-                  borderRadius: "9px",
-                  display: "grid",
-                  placeItems: "center",
-                  color: active ? "#60a5fa" : "#64748b",
-                  background: active
-                    ? "rgba(59, 130, 246, 0.15)"
-                    : "rgba(148, 163, 184, 0.05)",
-                }}
-              >
-                <MenuIcon name={link.icon} />
-              </span>
-
-              <span>{link.label}</span>
-            </Link>
-          );
-        })}
+            {link.label}
+          </Link>
+        ))}
       </nav>
 
       <div style={{ flex: 1 }} />
