@@ -41,9 +41,6 @@ function validateUser(body: any, requirePassword = true) {
 // Listar usuários
 usersRoutes.get("/users", async (_req, res) => {
   try {
-    console.log(Object.keys(prisma));
-    console.log(prisma.user);
-
     const users = await prisma.user.findMany({
       orderBy: {
         createdAt: "desc",

@@ -15,14 +15,16 @@ export default function DashboardLayout({
     >
       <Sidebar />
 
-      <main
-        style={{
-          flex: 1,
-          padding: "30px",
-        }}
-      >
-        {children}
-      </main>
+        <main
+          style={{
+            flex: 1,
+            padding: "34px",
+            background:
+              "radial-gradient(circle at top right, rgba(59,130,246,0.10), transparent 32%), #020617",
+          }}
+        >
+          {children}
+        </main>
     </div>
   );
 }
