@@ -1,275 +1,258 @@
-"use client";
-
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { Building2, Plus, Search } from "lucide-react";
+
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 interface Company {
   id: string;
   name: string;
-  businessType: string;
+  email?: string | null;
   plan: string;
   status: string;
+  createdAt?: string;
 }
 
-export default function CompaniesPage() {
-  const router = useRouter();
+interface CompaniesResponse {
+  data: Company[];
+  pagination?: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
 
-  const [companies, setCompanies] = useState<Company[]>([]);
+async function getCompanies(): Promise<CompaniesResponse> {
+  const response = await fetch("http://localhost:3333/companies", {
+    cache: "no-store",
+  });
 
-  async function loadCompanies() {
-    try {
-      const response = await fetch("http://localhost:3333/companies", {
-        cache: "no-store",
-      });
-
-      if (!response.ok) {
-        throw new Error("Erro ao buscar empresas");
-      }
-
-      const data = await response.json();
-
-      console.log("Resposta da API:", data);
-
-      if (Array.isArray(data)) {
-        setCompanies(data);
-      } else if (Array.isArray(data.companies)) {
-        setCompanies(data.companies);
-      } else {
-        console.error("Resposta inválida:", data);
-        setCompanies([]);
-      }
-    } catch (error) {
-      console.error(error);
-      setCompanies([]);
-    }
+  if (!response.ok) {
+    throw new Error("Não foi possível carregar as empresas.");
   }
 
-  useEffect(() => {
-    loadCompanies();
-  }, []);
+  const result = await response.json();
 
-  async function deactivateCompany(id: string) {
-    if (!confirm("Deseja desativar esta empresa?")) return;
-
-    const response = await fetch(
-      `http://localhost:3333/companies/${id}/deactivate`,
-      {
-        method: "PATCH",
-      }
-    );
-
-    if (!response.ok) {
-      alert("Erro ao desativar empresa.");
-      return;
-    }
-
-    alert("Empresa desativada com sucesso!");
-
-    await loadCompanies();
-    router.refresh();
+  if (Array.isArray(result)) {
+    return {
+      data: result,
+    };
   }
 
-  async function activateCompany(id: string) {
-    const response = await fetch(
-      `http://localhost:3333/companies/${id}/activate`,
-      {
-        method: "PATCH",
-      }
-    );
+  return result;
+}
 
-    if (!response.ok) {
-      alert("Erro ao reativar empresa.");
-      return;
-    }
+function isActiveStatus(status: string) {
+  const normalizedStatus = status.toLowerCase();
 
-    alert("Empresa reativada com sucesso!");
+  return normalizedStatus === "ativa" || normalizedStatus === "ativo";
+}
 
-    await loadCompanies();
-    router.refresh();
-  }
+export default async function CompaniesPage() {
+  const companiesResponse = await getCompanies();
+  const companies = companiesResponse.data ?? [];
 
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        backgroundColor: "#0f172a",
-        color: "#f8fafc",
-        padding: "40px",
-        fontFamily: "Arial, sans-serif",
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: "30px",
-        }}
-      >
-        <div>
-          <h1
-            style={{
-              margin: 0,
-              fontSize: "36px",
-              fontWeight: "bold",
-            }}
-          >
-            Empresas
-          </h1>
+    <div className="space-y-8">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex items-center gap-3">
+          <div className="rounded-xl bg-indigo-500/15 p-3 text-indigo-300">
+            <Building2 className="size-6" />
+          </div>
 
-          <p
-            style={{
-              marginTop: "8px",
-              color: "#94a3b8",
-              fontSize: "16px",
-            }}
-          >
-            Gerencie todas as empresas cadastradas no FlowTwo.
-          </p>
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight text-white">
+              Empresas
+            </h1>
+
+            <p className="mt-1 text-sm text-slate-400">
+              Gerencie as empresas cadastradas na plataforma.
+            </p>
+          </div>
         </div>
 
-        <Link href="/companies/new">
-          <button
-            style={{
-              backgroundColor: "#2563eb",
-              color: "#fff",
-              border: "none",
-              padding: "12px 22px",
-              borderRadius: "10px",
-              fontSize: "15px",
-              fontWeight: "bold",
-              cursor: "pointer",
-            }}
-          >
-            + Nova Empresa
-          </button>
-        </Link>
-      </div>
-
-      <div
-        style={{
-          backgroundColor: "#1e293b",
-          borderRadius: "12px",
-          overflow: "hidden",
-          border: "1px solid #334155",
-        }}
-      >
-        <table
-          style={{
-            width: "100%",
-            borderCollapse: "collapse",
-          }}
+        <Button
+          nativeButton={false}
+          render={<Link href="/companies/new" />}
+          className="gap-2 bg-indigo-600 text-white hover:bg-indigo-500"
         >
-          <thead
-            style={{
-              backgroundColor: "#334155",
-            }}
-          >
-            <tr>
-              <th style={thStyle}>Nome</th>
-              <th style={thStyle}>Ramo</th>
-              <th style={thStyle}>Plano</th>
-              <th style={thStyle}>Status</th>
-              <th style={thStyle}>Ações</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {companies.map((company) => (
-              <tr key={company.id} style={trStyle}>
-                <td style={tdStyle}>{company.name}</td>
-                <td style={tdStyle}>{company.businessType}</td>
-                <td style={tdStyle}>{company.plan}</td>
-
-                <td
-                  style={{
-                    ...tdStyle,
-                    color:
-                      company.status === "Ativa"
-                        ? "#22c55e"
-                        : "#facc15",
-                    fontWeight: "bold",
-                  }}
-                >
-                  {company.status}
-                </td>
-
-                <td style={tdStyle}>
-                  <div
-                    style={{
-                      display: "flex",
-                      gap: "10px",
-                    }}
-                  >
-                    <Link href={`/companies/${company.id}`}>
-                      <button
-                        style={{
-                          backgroundColor: "#2563eb",
-                          color: "#fff",
-                          border: "none",
-                          padding: "8px 14px",
-                          borderRadius: "6px",
-                          cursor: "pointer",
-                        }}
-                      >
-                        Editar
-                      </button>
-                    </Link>
-
-                    {company.status === "Ativa" ? (
-                      <button
-                        onClick={() => deactivateCompany(company.id)}
-                        style={{
-                          backgroundColor: "#dc2626",
-                          color: "#fff",
-                          border: "none",
-                          padding: "8px 14px",
-                          borderRadius: "6px",
-                          cursor: "pointer",
-                        }}
-                      >
-                        Desativar
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => activateCompany(company.id)}
-                        style={{
-                          backgroundColor: "#16a34a",
-                          color: "#fff",
-                          border: "none",
-                          padding: "8px 14px",
-                          borderRadius: "6px",
-                          cursor: "pointer",
-                        }}
-                      >
-                        Reativar
-                      </button>
-                    )}
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+          <Plus className="size-4" />
+          Nova empresa
+        </Button>
       </div>
-    </main>
+
+      <Card className="border-slate-800 bg-slate-900/90">
+        <CardHeader className="gap-5 border-b border-slate-800">
+          <div>
+            <CardTitle className="text-white">
+              Empresas cadastradas
+            </CardTitle>
+
+            <CardDescription className="mt-1 text-slate-400">
+              Consulte os dados, planos e status das empresas.
+            </CardDescription>
+          </div>
+
+          <div className="relative max-w-md">
+            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-500" />
+
+            <Input
+              type="search"
+              placeholder="Buscar empresa..."
+              className="border-slate-700 bg-slate-950 pl-10 text-white placeholder:text-slate-500"
+            />
+          </div>
+        </CardHeader>
+
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="border-slate-800 hover:bg-transparent">
+                  <TableHead className="px-6 text-slate-400">
+                    Empresa
+                  </TableHead>
+
+                  <TableHead className="text-slate-400">
+                    E-mail
+                  </TableHead>
+
+                  <TableHead className="text-slate-400">
+                    Plano
+                  </TableHead>
+
+                  <TableHead className="text-slate-400">
+                    Status
+                  </TableHead>
+
+                  <TableHead className="px-6 text-right text-slate-400">
+                    Ações
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+
+              <TableBody>
+                {companies.map((company) => {
+                  const active = isActiveStatus(company.status);
+
+                  return (
+                    <TableRow
+                      key={company.id}
+                      className="border-slate-800 hover:bg-slate-800/40"
+                    >
+                      <TableCell className="px-6">
+                        <div className="flex items-center gap-3">
+                          <div className="grid size-10 place-items-center rounded-xl bg-indigo-500/15 font-semibold text-indigo-300">
+                            {company.name.charAt(0).toUpperCase()}
+                          </div>
+
+                          <div>
+                            <p className="font-semibold text-white">
+                              {company.name}
+                            </p>
+
+                            <p className="mt-1 text-xs text-slate-500">
+                              ID: {company.id.slice(0, 8)}
+                            </p>
+                          </div>
+                        </div>
+                      </TableCell>
+
+                      <TableCell className="text-slate-300">
+                        {company.email || "Não informado"}
+                      </TableCell>
+
+                      <TableCell>
+                        <Badge
+                          variant="outline"
+                          className="border-indigo-500/30 bg-indigo-500/10 text-indigo-300"
+                        >
+                          {company.plan}
+                        </Badge>
+                      </TableCell>
+
+                      <TableCell>
+                        <Badge
+                          variant={active ? "default" : "secondary"}
+                          className={
+                            active
+                              ? "bg-emerald-500/15 text-emerald-300"
+                              : "bg-slate-700 text-slate-300"
+                          }
+                        >
+                          {company.status}
+                        </Badge>
+                      </TableCell>
+
+                      <TableCell className="px-6 text-right">
+                        <Button
+                          nativeButton={false}
+                          render={
+                            <Link href={`/companies/${company.id}`} />
+                          }
+                          variant="ghost"
+                          className="text-slate-300 hover:bg-slate-800 hover:text-white"
+                        >
+                          Visualizar
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+
+                {companies.length === 0 && (
+                  <TableRow className="border-slate-800">
+                    <TableCell
+                      colSpan={5}
+                      className="px-6 py-16 text-center"
+                    >
+                      <div className="mx-auto max-w-sm">
+                        <div className="mx-auto grid size-14 place-items-center rounded-2xl bg-slate-800 text-slate-400">
+                          <Building2 className="size-6" />
+                        </div>
+
+                        <h2 className="mt-4 text-lg font-semibold text-white">
+                          Nenhuma empresa encontrada
+                        </h2>
+
+                        <p className="mt-2 text-sm text-slate-400">
+                          Cadastre a primeira empresa para começar.
+                        </p>
+
+                        <Button
+                          nativeButton={false}
+                          render={<Link href="/companies/new" />}
+                          className="mt-5 gap-2 bg-indigo-600 text-white hover:bg-indigo-500"
+                        >
+                          <Plus className="size-4" />
+                          Nova empresa
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
-
-const thStyle = {
-  padding: "18px",
-  textAlign: "left" as const,
-  fontSize: "15px",
-  fontWeight: "bold",
-};
-
-const tdStyle = {
-  padding: "18px",
-  borderTop: "1px solid #334155",
-  fontSize: "15px",
-};
-
-const trStyle = {
-  backgroundColor: "#1e293b",
-};
