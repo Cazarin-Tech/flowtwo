@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Building2, Plus, Search } from "lucide-react";
+import { Building2, Plus, Search, X } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -24,6 +24,7 @@ interface Company {
   id: string;
   name: string;
   email?: string | null;
+  businessType?: string | null;
   plan: string;
   status: string;
   createdAt?: string;
@@ -37,6 +38,12 @@ interface CompaniesResponse {
     total: number;
     totalPages: number;
   };
+}
+
+interface CompaniesPageProps {
+  searchParams: Promise<{
+    search?: string;
+  }>;
 }
 
 async function getCompanies(): Promise<CompaniesResponse> {
@@ -65,9 +72,31 @@ function isActiveStatus(status: string) {
   return normalizedStatus === "ativa" || normalizedStatus === "ativo";
 }
 
-export default async function CompaniesPage() {
+export default async function CompaniesPage({
+  searchParams,
+}: CompaniesPageProps) {
   const companiesResponse = await getCompanies();
-  const companies = companiesResponse.data ?? [];
+  const params = await searchParams;
+
+  const search = String(params.search ?? "").trim().toLowerCase();
+  const allCompanies = companiesResponse.data ?? [];
+
+  const companies = search
+    ? allCompanies.filter((company) => {
+        const searchableContent = [
+          company.name,
+          company.email,
+          company.businessType,
+          company.plan,
+          company.status,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+
+        return searchableContent.includes(search);
+      })
+    : allCompanies;
 
   return (
     <div className="space-y-8">
@@ -110,14 +139,63 @@ export default async function CompaniesPage() {
             </CardDescription>
           </div>
 
-          <div className="relative max-w-md">
-            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-500" />
+          <form
+            action="/companies"
+            method="GET"
+            className="flex max-w-xl flex-col gap-3 sm:flex-row"
+          >
+            <div className="relative flex-1">
+              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-500" />
 
-            <Input
-              type="search"
-              placeholder="Buscar empresa..."
-              className="border-slate-700 bg-slate-950 pl-10 text-white placeholder:text-slate-500"
-            />
+              <Input
+                name="search"
+                type="search"
+                defaultValue={params.search ?? ""}
+                placeholder="Buscar por nome, e-mail, ramo, plano ou status..."
+                className="border-slate-700 bg-slate-950 pl-10 text-white placeholder:text-slate-500"
+              />
+            </div>
+
+            <Button
+              type="submit"
+              className="bg-indigo-600 text-white hover:bg-indigo-500"
+            >
+              Buscar
+            </Button>
+
+            {search && (
+              <Button
+                nativeButton={false}
+                render={<Link href="/companies" />}
+                variant="outline"
+                className="gap-2 border-slate-700 bg-slate-900 text-slate-300 hover:bg-slate-800 hover:text-white"
+              >
+                <X className="size-4" />
+                Limpar
+              </Button>
+            )}
+          </form>
+
+          <div className="flex flex-wrap items-center gap-2 text-sm text-slate-400">
+            <span>
+              {companies.length}{" "}
+              {companies.length === 1
+                ? "empresa encontrada"
+                : "empresas encontradas"}
+            </span>
+
+            {search && (
+              <>
+                <span>•</span>
+
+                <span>
+                  Busca por:{" "}
+                  <strong className="font-medium text-slate-200">
+                    {params.search}
+                  </strong>
+                </span>
+              </>
+            )}
           </div>
         </CardHeader>
 
@@ -229,21 +307,37 @@ export default async function CompaniesPage() {
                         </div>
 
                         <h2 className="mt-4 text-lg font-semibold text-white">
-                          Nenhuma empresa encontrada
+                          {search
+                            ? "Nenhuma empresa corresponde à busca"
+                            : "Nenhuma empresa encontrada"}
                         </h2>
 
                         <p className="mt-2 text-sm text-slate-400">
-                          Cadastre a primeira empresa para começar.
+                          {search
+                            ? "Tente buscar usando outro nome, plano, status ou ramo de atuação."
+                            : "Cadastre a primeira empresa para começar."}
                         </p>
 
-                        <Button
-                          nativeButton={false}
-                          render={<Link href="/companies/new" />}
-                          className="mt-5 gap-2 bg-indigo-600 text-white hover:bg-indigo-500"
-                        >
-                          <Plus className="size-4" />
-                          Nova empresa
-                        </Button>
+                        {search ? (
+                          <Button
+                            nativeButton={false}
+                            render={<Link href="/companies" />}
+                            variant="outline"
+                            className="mt-5 gap-2 border-slate-700 bg-slate-900 text-slate-300 hover:bg-slate-800 hover:text-white"
+                          >
+                            <X className="size-4" />
+                            Limpar busca
+                          </Button>
+                        ) : (
+                          <Button
+                            nativeButton={false}
+                            render={<Link href="/companies/new" />}
+                            className="mt-5 gap-2 bg-indigo-600 text-white hover:bg-indigo-500"
+                          >
+                            <Plus className="size-4" />
+                            Nova empresa
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
