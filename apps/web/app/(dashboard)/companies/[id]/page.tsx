@@ -1,7 +1,24 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import {
+  ArrowLeft,
+  Building2,
+  Loader2,
+  Save,
+  Trash2,
+} from "lucide-react";
+
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 
 interface PageProps {
   params: Promise<{
@@ -17,188 +34,345 @@ interface Company {
   status: string;
 }
 
+const initialCompany: Company = {
+  id: "",
+  name: "",
+  businessType: "",
+  plan: "Free",
+  status: "Ativa",
+};
+
 export default function EditCompanyPage({ params }: PageProps) {
   const router = useRouter();
+  const { id } = use(params);
 
-  const [id, setId] = useState("");
-
-  const [company, setCompany] = useState<Company>({
-    id: "",
-    name: "",
-    businessType: "",
-    plan: "",
-    status: "Ativa",
-  });
+  const [company, setCompany] = useState<Company>(initialCompany);
+  const [loadingCompany, setLoadingCompany] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     async function loadCompany() {
-      const { id } = await params;
+      try {
+        setLoadingCompany(true);
+        setError("");
 
-      setId(id);
+        const response = await fetch(
+          `http://localhost:3333/companies/${id}`,
+          {
+            cache: "no-store",
+          },
+        );
 
-      const response = await fetch(`http://localhost:3333/companies/${id}`, {
-        cache: "no-store",
-      });
+        if (!response.ok) {
+          throw new Error("Empresa não encontrada.");
+        }
 
-      if (!response.ok) {
-        alert("Empresa não encontrada.");
-        router.push("/companies");
-        return;
+        const result = await response.json();
+        const companyData = result.data ?? result;
+
+        setCompany({
+          id: companyData.id,
+          name: companyData.name ?? "",
+          businessType: companyData.businessType ?? "",
+          plan: companyData.plan ?? "Free",
+          status: companyData.status ?? "Ativa",
+        });
+      } catch (requestError) {
+        console.error(requestError);
+        setError("Não foi possível carregar os dados da empresa.");
+      } finally {
+        setLoadingCompany(false);
       }
-
-      const data = await response.json();
-
-      setCompany(data);
     }
 
     loadCompany();
-  }, [params, router]);
+  }, [id]);
 
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
+  function updateCompany<K extends keyof Company>(
+    field: K,
+    value: Company[K],
+  ) {
+    setCompany((currentCompany) => ({
+      ...currentCompany,
+      [field]: value,
+    }));
+  }
 
-    const response = await fetch(`http://localhost:3333/companies/${id}`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        name: company.name,
-        businessType: company.businessType,
-        plan: company.plan,
-        status: company.status,
-      }),
-    });
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
 
-    if (!response.ok) {
-      alert("Erro ao atualizar empresa.");
+    try {
+      setSaving(true);
+      setError("");
+
+      const response = await fetch(
+        `http://localhost:3333/companies/${id}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            name: company.name,
+            businessType: company.businessType,
+            plan: company.plan,
+            status: company.status,
+          }),
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error("Erro ao atualizar empresa.");
+      }
+
+      router.push("/companies");
+      router.refresh();
+    } catch (requestError) {
+      console.error(requestError);
+      setError("Não foi possível atualizar a empresa.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDelete() {
+    const confirmed = window.confirm(
+      `Tem certeza que deseja excluir a empresa "${company.name}"?`,
+    );
+
+    if (!confirmed) {
       return;
     }
 
-    alert("Empresa atualizada com sucesso!");
+    try {
+      setDeleting(true);
+      setError("");
 
-    router.push("/companies");
+      const response = await fetch(
+        `http://localhost:3333/companies/${id}`,
+        {
+          method: "DELETE",
+        },
+      );
 
-    router.refresh();
+      if (!response.ok) {
+        throw new Error("Erro ao excluir empresa.");
+      }
+
+      router.push("/companies");
+      router.refresh();
+    } catch (requestError) {
+      console.error(requestError);
+      setError("Não foi possível excluir a empresa.");
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  if (loadingCompany) {
+    return (
+      <div className="grid min-h-[420px] place-items-center">
+        <div className="flex items-center gap-3 text-slate-400">
+          <Loader2 className="size-5 animate-spin" />
+          Carregando empresa...
+        </div>
+      </div>
+    );
   }
 
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        backgroundColor: "#0f172a",
-        color: "#fff",
-        padding: "40px",
-        fontFamily: "Arial, sans-serif",
-      }}
-    >
-      <h1
-        style={{
-          marginBottom: "30px",
-        }}
-      >
-        Editar Empresa
-      </h1>
+    <div className="mx-auto max-w-3xl space-y-8">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-4">
+          <div className="rounded-2xl bg-indigo-500/15 p-3 text-indigo-300">
+            <Building2 className="size-7" />
+          </div>
 
-      <form
-        onSubmit={handleSubmit}
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: "20px",
-          maxWidth: "500px",
-        }}
-      >
-        <div>
-          <label>Nome</label>
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight text-white">
+              Editar empresa
+            </h1>
 
-          <input
-            value={company.name}
-            onChange={(e) =>
-              setCompany({
-                ...company,
-                name: e.target.value,
-              })
-            }
-            style={inputStyle}
-          />
+            <p className="mt-1 text-slate-400">
+              Atualize os dados e configurações da empresa.
+            </p>
+          </div>
         </div>
 
-        <div>
-          <label>Ramo</label>
-
-          <input
-            value={company.businessType}
-            onChange={(e) =>
-              setCompany({
-                ...company,
-                businessType: e.target.value,
-              })
-            }
-            style={inputStyle}
-          />
-        </div>
-
-        <div>
-          <label>Plano</label>
-
-          <input
-            value={company.plan}
-            onChange={(e) =>
-              setCompany({
-                ...company,
-                plan: e.target.value,
-              })
-            }
-            style={inputStyle}
-          />
-        </div>
-
-        <div>
-          <label>Status</label>
-
-          <select
-            value={company.status}
-            onChange={(e) =>
-              setCompany({
-                ...company,
-                status: e.target.value,
-              })
-            }
-            style={inputStyle}
-          >
-            <option value="Ativa">Ativa</option>
-            <option value="Inativa">Inativa</option>
-          </select>
-        </div>
-
-        <button
-          type="submit"
-          style={{
-            backgroundColor: "#2563eb",
-            color: "#fff",
-            border: "none",
-            padding: "12px",
-            borderRadius: "8px",
-            cursor: "pointer",
-            fontSize: "16px",
-            fontWeight: "bold",
-          }}
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => router.push("/companies")}
+          className="gap-2 border-slate-700 bg-slate-900 text-slate-300 hover:bg-slate-800 hover:text-white"
         >
-          Salvar alterações
-        </button>
-      </form>
-    </main>
+          <ArrowLeft className="size-4" />
+          Voltar
+        </Button>
+      </div>
+
+      <Card className="border-slate-800 bg-slate-900">
+        <CardHeader>
+          <CardTitle className="text-white">Dados da empresa</CardTitle>
+
+          <CardDescription className="text-slate-400">
+            Edite as informações abaixo e salve as alterações.
+          </CardDescription>
+        </CardHeader>
+
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {error && (
+              <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">
+                {error}
+              </div>
+            )}
+
+            <div>
+              <label
+                htmlFor="name"
+                className="mb-2 block text-sm font-medium text-slate-300"
+              >
+                Nome
+              </label>
+
+              <Input
+                id="name"
+                name="name"
+                value={company.name}
+                onChange={(event) =>
+                  updateCompany("name", event.target.value)
+                }
+                required
+                placeholder="Nome da empresa"
+                className="border-slate-700 bg-slate-950 text-white placeholder:text-slate-500"
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor="businessType"
+                className="mb-2 block text-sm font-medium text-slate-300"
+              >
+                Ramo de atuação
+              </label>
+
+              <Input
+                id="businessType"
+                name="businessType"
+                value={company.businessType}
+                onChange={(event) =>
+                  updateCompany("businessType", event.target.value)
+                }
+                required
+                placeholder="Ex.: Tecnologia"
+                className="border-slate-700 bg-slate-950 text-white placeholder:text-slate-500"
+              />
+            </div>
+
+            <div className="grid gap-6 md:grid-cols-2">
+              <div>
+                <label
+                  htmlFor="plan"
+                  className="mb-2 block text-sm font-medium text-slate-300"
+                >
+                  Plano
+                </label>
+
+                <select
+                  id="plan"
+                  name="plan"
+                  value={company.plan}
+                  onChange={(event) =>
+                    updateCompany("plan", event.target.value)
+                  }
+                  className="h-10 w-full rounded-md border border-slate-700 bg-slate-950 px-3 text-sm text-white outline-none transition focus:border-indigo-500"
+                >
+                  <option value="Free">Free</option>
+                  <option value="Starter">Starter</option>
+                  <option value="Pro">Pro</option>
+                </select>
+              </div>
+
+              <div>
+                <label
+                  htmlFor="status"
+                  className="mb-2 block text-sm font-medium text-slate-300"
+                >
+                  Status
+                </label>
+
+                <select
+                  id="status"
+                  name="status"
+                  value={company.status}
+                  onChange={(event) =>
+                    updateCompany("status", event.target.value)
+                  }
+                  className="h-10 w-full rounded-md border border-slate-700 bg-slate-950 px-3 text-sm text-white outline-none transition focus:border-indigo-500"
+                >
+                  <option value="Ativa">Ativa</option>
+                  <option value="Teste">Teste</option>
+                  <option value="Inativa">Inativa</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-3 border-t border-slate-800 pt-6 sm:flex-row sm:items-center sm:justify-between">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleDelete}
+                disabled={deleting || saving}
+                className="gap-2 border-rose-500/30 bg-rose-500/10 text-rose-300 hover:bg-rose-500/20 hover:text-rose-200"
+              >
+                {deleting ? (
+                  <>
+                    <Loader2 className="size-4 animate-spin" />
+                    Excluindo...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="size-4" />
+                    Excluir empresa
+                  </>
+                )}
+              </Button>
+
+              <div className="flex gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => router.push("/companies")}
+                  disabled={saving || deleting}
+                  className="border-slate-700 bg-slate-900 text-slate-300 hover:bg-slate-800 hover:text-white"
+                >
+                  Cancelar
+                </Button>
+
+                <Button
+                  type="submit"
+                  disabled={saving || deleting}
+                  className="gap-2 bg-indigo-600 text-white hover:bg-indigo-500"
+                >
+                  {saving ? (
+                    <>
+                      <Loader2 className="size-4 animate-spin" />
+                      Salvando...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="size-4" />
+                      Salvar alterações
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
-
-const inputStyle = {
-  width: "100%",
-  padding: "12px",
-  marginTop: "8px",
-  borderRadius: "8px",
-  border: "1px solid #334155",
-  backgroundColor: "#1e293b",
-  color: "#fff",
-  fontSize: "15px",
-};
