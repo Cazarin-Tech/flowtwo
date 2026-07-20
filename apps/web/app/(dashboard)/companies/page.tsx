@@ -1,5 +1,12 @@
 import Link from "next/link";
-import { Building2, Plus, Search, X } from "lucide-react";
+import {
+  Building2,
+  ChevronLeft,
+  ChevronRight,
+  Plus,
+  Search,
+  X,
+} from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,7 +17,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -43,27 +49,50 @@ interface CompaniesResponse {
 interface CompaniesPageProps {
   searchParams: Promise<{
     search?: string;
+    page?: string;
   }>;
 }
 
+const ITEMS_PER_PAGE = 5;
+
 async function getCompanies(): Promise<CompaniesResponse> {
-  const response = await fetch("http://localhost:3333/companies", {
-    cache: "no-store",
-  });
+  try {
+    const response = await fetch("http://localhost:3333/companies", {
+      cache: "no-store",
+    });
 
-  if (!response.ok) {
-    throw new Error("Não foi possível carregar as empresas.");
-  }
+    if (!response.ok) {
+      return {
+        data: [],
+        pagination: {
+          page: 1,
+          limit: ITEMS_PER_PAGE,
+          total: 0,
+          totalPages: 0,
+        },
+      };
+    }
 
-  const result = await response.json();
+    const result = await response.json();
 
-  if (Array.isArray(result)) {
+    if (Array.isArray(result)) {
+      return {
+        data: result,
+      };
+    }
+
+    return result;
+  } catch {
     return {
-      data: result,
+      data: [],
+      pagination: {
+        page: 1,
+        limit: ITEMS_PER_PAGE,
+        total: 0,
+        totalPages: 0,
+      },
     };
   }
-
-  return result;
 }
 
 function isActiveStatus(status: string) {
@@ -72,16 +101,41 @@ function isActiveStatus(status: string) {
   return normalizedStatus === "ativa" || normalizedStatus === "ativo";
 }
 
+function createCompaniesUrl(search: string, page: number) {
+  const params = new URLSearchParams();
+
+  if (search) {
+    params.set("search", search);
+  }
+
+  if (page > 1) {
+    params.set("page", String(page));
+  }
+
+  const query = params.toString();
+
+  return query ? `/companies?${query}` : "/companies";
+}
+
 export default async function CompaniesPage({
   searchParams,
 }: CompaniesPageProps) {
   const companiesResponse = await getCompanies();
   const params = await searchParams;
 
-  const search = String(params.search ?? "").trim().toLowerCase();
+  const originalSearch = String(params.search ?? "").trim();
+  const normalizedSearch = originalSearch.toLowerCase();
+
+  const requestedPage = Number.parseInt(params.page ?? "1", 10);
+
+  const validRequestedPage =
+    Number.isFinite(requestedPage) && requestedPage > 0
+      ? requestedPage
+      : 1;
+
   const allCompanies = companiesResponse.data ?? [];
 
-  const companies = search
+  const filteredCompanies = normalizedSearch
     ? allCompanies.filter((company) => {
         const searchableContent = [
           company.name,
@@ -94,9 +148,47 @@ export default async function CompaniesPage({
           .join(" ")
           .toLowerCase();
 
-        return searchableContent.includes(search);
+        return searchableContent.includes(normalizedSearch);
       })
     : allCompanies;
+
+  const totalCompaniesCount = filteredCompanies.length;
+
+  const activeCompanies = filteredCompanies.filter((company) =>
+    isActiveStatus(company.status),
+  ).length;
+
+  const proCompanies = filteredCompanies.filter(
+    (company) => company.plan.toLowerCase() === "pro",
+  ).length;
+
+  const totalCompanies = filteredCompanies.length;
+
+  const totalPages = Math.max(
+    1,
+    Math.ceil(totalCompanies / ITEMS_PER_PAGE),
+  );
+
+  const currentPage = Math.min(validRequestedPage, totalPages);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+
+  const companies = filteredCompanies.slice(startIndex, endIndex);
+
+  const firstVisibleItem =
+    totalCompanies === 0 ? 0 : startIndex + 1;
+
+  const lastVisibleItem = Math.min(endIndex, totalCompanies);
+
+  const previousPageUrl = createCompaniesUrl(
+    originalSearch,
+    currentPage - 1,
+  );
+
+  const nextPageUrl = createCompaniesUrl(
+    originalSearch,
+    currentPage + 1,
+  );
 
   return (
     <div className="space-y-8">
@@ -127,6 +219,44 @@ export default async function CompaniesPage({
         </Button>
       </div>
 
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card className="border-slate-800 bg-slate-900">
+          <CardContent className="p-6">
+            <p className="text-sm text-slate-400">
+              Empresas
+            </p>
+
+            <h2 className="mt-2 text-3xl font-bold text-white">
+              {totalCompaniesCount}
+            </h2>
+          </CardContent>
+        </Card>
+
+        <Card className="border-slate-800 bg-slate-900">
+          <CardContent className="p-6">
+            <p className="text-sm text-slate-400">
+              Empresas ativas
+            </p>
+
+            <h2 className="mt-2 text-3xl font-bold text-emerald-400">
+              {activeCompanies}
+            </h2>
+          </CardContent>
+        </Card>
+
+        <Card className="border-slate-800 bg-slate-900">
+          <CardContent className="p-6">
+            <p className="text-sm text-slate-400">
+              Plano Pro
+            </p>
+
+            <h2 className="mt-2 text-3xl font-bold text-indigo-400">
+              {proCompanies}
+            </h2>
+          </CardContent>
+        </Card>
+      </div>
+
       <Card className="border-slate-800 bg-slate-900/90">
         <CardHeader className="gap-5 border-b border-slate-800">
           <div>
@@ -147,12 +277,13 @@ export default async function CompaniesPage({
             <div className="relative flex-1">
               <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-500" />
 
-              <Input
+              <input
+                key={originalSearch}
                 name="search"
                 type="search"
-                defaultValue={params.search ?? ""}
-                placeholder="Buscar por nome, e-mail, ramo, plano ou status..."
-                className="border-slate-700 bg-slate-950 pl-10 text-white placeholder:text-slate-500"
+                defaultValue={originalSearch}
+                placeholder="Buscar por nome, plano, status ou ramo..."
+                className="flex h-10 w-full rounded-md border border-slate-700 bg-slate-950 py-2 pl-10 pr-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
               />
             </div>
 
@@ -163,7 +294,7 @@ export default async function CompaniesPage({
               Buscar
             </Button>
 
-            {search && (
+            {normalizedSearch && (
               <Button
                 nativeButton={false}
                 render={<Link href="/companies" />}
@@ -178,20 +309,20 @@ export default async function CompaniesPage({
 
           <div className="flex flex-wrap items-center gap-2 text-sm text-slate-400">
             <span>
-              {companies.length}{" "}
-              {companies.length === 1
+              {totalCompanies}{" "}
+              {totalCompanies === 1
                 ? "empresa encontrada"
                 : "empresas encontradas"}
             </span>
 
-            {search && (
+            {normalizedSearch && (
               <>
                 <span>•</span>
 
                 <span>
                   Busca por:{" "}
                   <strong className="font-medium text-slate-200">
-                    {params.search}
+                    {originalSearch}
                   </strong>
                 </span>
               </>
@@ -307,18 +438,18 @@ export default async function CompaniesPage({
                         </div>
 
                         <h2 className="mt-4 text-lg font-semibold text-white">
-                          {search
+                          {normalizedSearch
                             ? "Nenhuma empresa corresponde à busca"
                             : "Nenhuma empresa encontrada"}
                         </h2>
 
                         <p className="mt-2 text-sm text-slate-400">
-                          {search
-                            ? "Tente buscar usando outro nome, plano, status ou ramo de atuação."
+                          {normalizedSearch
+                            ? "Tente pesquisar usando outro termo."
                             : "Cadastre a primeira empresa para começar."}
                         </p>
 
-                        {search ? (
+                        {normalizedSearch ? (
                           <Button
                             nativeButton={false}
                             render={<Link href="/companies" />}
@@ -345,6 +476,83 @@ export default async function CompaniesPage({
               </TableBody>
             </Table>
           </div>
+
+          {totalCompanies > 0 && (
+            <div className="flex flex-col gap-4 border-t border-slate-800 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm text-slate-400">
+                Mostrando{" "}
+                <strong className="font-medium text-slate-200">
+                  {firstVisibleItem}
+                </strong>{" "}
+                até{" "}
+                <strong className="font-medium text-slate-200">
+                  {lastVisibleItem}
+                </strong>{" "}
+                de{" "}
+                <strong className="font-medium text-slate-200">
+                  {totalCompanies}
+                </strong>{" "}
+                empresas
+              </p>
+
+              <div className="flex items-center gap-3">
+                {currentPage > 1 ? (
+                  <Button
+                    nativeButton={false}
+                    render={<Link href={previousPageUrl} />}
+                    variant="outline"
+                    className="gap-2 border-slate-700 bg-slate-900 text-slate-300 hover:bg-slate-800 hover:text-white"
+                  >
+                    <ChevronLeft className="size-4" />
+                    Anterior
+                  </Button>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled
+                    className="gap-2 border-slate-700 bg-slate-900 text-slate-500"
+                  >
+                    <ChevronLeft className="size-4" />
+                    Anterior
+                  </Button>
+                )}
+
+                <span className="min-w-28 text-center text-sm text-slate-400">
+                  Página{" "}
+                  <strong className="text-slate-200">
+                    {currentPage}
+                  </strong>{" "}
+                  de{" "}
+                  <strong className="text-slate-200">
+                    {totalPages}
+                  </strong>
+                </span>
+
+                {currentPage < totalPages ? (
+                  <Button
+                    nativeButton={false}
+                    render={<Link href={nextPageUrl} />}
+                    variant="outline"
+                    className="gap-2 border-slate-700 bg-slate-900 text-slate-300 hover:bg-slate-800 hover:text-white"
+                  >
+                    Próxima
+                    <ChevronRight className="size-4" />
+                  </Button>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled
+                    className="gap-2 border-slate-700 bg-slate-900 text-slate-500"
+                  >
+                    Próxima
+                    <ChevronRight className="size-4" />
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
