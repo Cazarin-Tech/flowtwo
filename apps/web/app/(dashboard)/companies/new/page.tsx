@@ -1,103 +1,258 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Building2, Loader2 } from "lucide-react";
+import { toast } from "sonner";
+
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+
+interface CompanyApiResponse {
+  message?: string;
+  error?: string;
+  company?: {
+    id: string;
+    name: string;
+    businessType: string;
+    plan: string;
+    status: string;
+  };
+}
 
 export default function NewCompanyPage() {
   const router = useRouter();
+  const [loading, setLoading] = useState(false);
 
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(
+    event: React.FormEvent<HTMLFormElement>,
+  ) {
     event.preventDefault();
 
     const form = event.currentTarget;
     const formData = new FormData(form);
 
-    await fetch("http://localhost:3333/companies", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        name: formData.get("name"),
-        businessType: formData.get("businessType"),
-        plan: formData.get("plan"),
-        status: formData.get("status"),
-      }),
-    });
+    const payload = {
+      name: String(formData.get("name") ?? "").trim(),
+      businessType: String(
+        formData.get("businessType") ?? "",
+      ).trim(),
+      plan: String(formData.get("plan") ?? "Free"),
+      status: String(formData.get("status") ?? "Ativa"),
+    };
 
-    router.push("/companies");
-    router.refresh();
+    if (!payload.name || !payload.businessType) {
+      toast.error("Preencha todos os campos obrigatórios.");
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      const response = await fetch(
+        "http://localhost:3333/companies",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        },
+      );
+
+      const responseText = await response.text();
+
+      let result: CompanyApiResponse | null = null;
+
+      try {
+        result = responseText
+          ? (JSON.parse(responseText) as CompanyApiResponse)
+          : null;
+      } catch {
+        result = null;
+      }
+
+      if (!response.ok) {
+        const apiMessage =
+          result?.message ||
+          result?.error ||
+          responseText ||
+          "Não foi possível cadastrar a empresa.";
+
+        throw new Error(
+          `Erro ${response.status}: ${apiMessage}`,
+        );
+      }
+
+      toast.success(
+        result?.message || "Empresa cadastrada com sucesso!",
+      );
+
+      form.reset();
+
+      router.push("/companies");
+      router.refresh();
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Não foi possível cadastrar a empresa.";
+
+      toast.error(message);
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
-    <main style={mainStyle}>
-      <div style={cardStyle}>
-        <h1 style={{ marginBottom: "25px" }}>Nova Empresa</h1>
+    <div className="mx-auto max-w-3xl space-y-8">
+      <div className="flex items-center gap-4">
+        <div className="rounded-2xl bg-indigo-500/15 p-3 text-indigo-300">
+          <Building2 className="size-7" />
+        </div>
 
-        <form onSubmit={handleSubmit} style={formStyle}>
-          <input name="name" type="text" placeholder="Nome da empresa" style={inputStyle} required />
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-white">
+            Nova empresa
+          </h1>
 
-          <input name="businessType" type="text" placeholder="Ramo de atuação" style={inputStyle} required />
-
-          <select name="plan" style={inputStyle}>
-            <option>Free</option>
-            <option>Starter</option>
-            <option>Pro</option>
-          </select>
-
-          <select name="status" style={inputStyle}>
-            <option>Ativa</option>
-            <option>Teste</option>
-            <option>Inativa</option>
-          </select>
-
-          <button type="submit" style={buttonStyle}>
-            Salvar Empresa
-          </button>
-        </form>
+          <p className="mt-1 text-slate-400">
+            Cadastre uma nova empresa na plataforma.
+          </p>
+        </div>
       </div>
-    </main>
+
+      <Card className="border-slate-800 bg-slate-900">
+        <CardHeader>
+          <CardTitle className="text-white">
+            Dados da empresa
+          </CardTitle>
+
+          <CardDescription className="text-slate-400">
+            Preencha as informações abaixo para realizar o cadastro.
+          </CardDescription>
+        </CardHeader>
+
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div>
+              <label
+                htmlFor="name"
+                className="mb-2 block text-sm font-medium text-slate-300"
+              >
+                Nome
+              </label>
+
+              <Input
+                id="name"
+                name="name"
+                type="text"
+                required
+                disabled={loading}
+                placeholder="Empresa XYZ"
+                className="border-slate-700 bg-slate-950 text-white placeholder:text-slate-500"
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor="businessType"
+                className="mb-2 block text-sm font-medium text-slate-300"
+              >
+                Ramo de atuação
+              </label>
+
+              <Input
+                id="businessType"
+                name="businessType"
+                type="text"
+                required
+                disabled={loading}
+                placeholder="Ex.: Tecnologia"
+                className="border-slate-700 bg-slate-950 text-white placeholder:text-slate-500"
+              />
+            </div>
+
+            <div className="grid gap-6 md:grid-cols-2">
+              <div>
+                <label
+                  htmlFor="plan"
+                  className="mb-2 block text-sm font-medium text-slate-300"
+                >
+                  Plano
+                </label>
+
+                <select
+                  id="plan"
+                  name="plan"
+                  defaultValue="Free"
+                  disabled={loading}
+                  className="h-10 w-full rounded-md border border-slate-700 bg-slate-950 px-3 text-sm text-white outline-none transition focus:border-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <option value="Free">Free</option>
+                  <option value="Starter">Starter</option>
+                  <option value="Pro">Pro</option>
+                </select>
+              </div>
+
+              <div>
+                <label
+                  htmlFor="status"
+                  className="mb-2 block text-sm font-medium text-slate-300"
+                >
+                  Status
+                </label>
+
+                <select
+                  id="status"
+                  name="status"
+                  defaultValue="Ativa"
+                  disabled={loading}
+                  className="h-10 w-full rounded-md border border-slate-700 bg-slate-950 px-3 text-sm text-white outline-none transition focus:border-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <option value="Ativa">Ativa</option>
+                  <option value="Teste">Teste</option>
+                  <option value="Inativa">Inativa</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 border-t border-slate-800 pt-6">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={loading}
+                onClick={() => router.push("/companies")}
+                className="border-slate-700 bg-slate-900 text-slate-300 hover:bg-slate-800 hover:text-white"
+              >
+                Cancelar
+              </Button>
+
+              <Button
+                type="submit"
+                disabled={loading}
+                className="gap-2 bg-indigo-600 text-white hover:bg-indigo-500"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="size-4 animate-spin" />
+                    Salvando...
+                  </>
+                ) : (
+                  "Salvar empresa"
+                )}
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
-
-const mainStyle = {
-  minHeight: "100vh",
-  background: "#0f172a",
-  color: "#fff",
-  padding: "40px",
-  fontFamily: "Arial, sans-serif",
-};
-
-const cardStyle = {
-  maxWidth: "600px",
-  margin: "0 auto",
-  background: "#1e293b",
-  padding: "30px",
-  borderRadius: "12px",
-  border: "1px solid #334155",
-};
-
-const formStyle = {
-  display: "flex",
-  flexDirection: "column",
-  gap: "18px",
-};
-
-const inputStyle = {
-  padding: "12px",
-  borderRadius: "8px",
-  border: "1px solid #334155",
-  background: "#0f172a",
-  color: "#fff",
-  fontSize: "16px",
-};
-
-const buttonStyle = {
-  padding: "14px",
-  borderRadius: "8px",
-  border: "none",
-  background: "#2563eb",
-  color: "#fff",
-  fontSize: "16px",
-  fontWeight: "bold",
-  cursor: "pointer",
-};
