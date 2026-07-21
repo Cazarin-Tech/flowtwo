@@ -68,11 +68,8 @@ const ITEMS_PER_PAGE = 5;
 export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
-  const [changingId, setChangingId] = useState<string | null>(
-    null,
-  );
-  const [selectedUser, setSelectedUser] =
-    useState<User | null>(null);
+  const [changingId, setChangingId] = useState<string | null>(null);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [search, setSearch] = useState("");
   const [error, setError] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -82,12 +79,9 @@ export default function UsersPage() {
       setLoading(true);
       setError("");
 
-      const response = await fetch(
-        "http://localhost:3333/users",
-        {
-          cache: "no-store",
-        },
-      );
+      const response = await fetch("http://localhost:3333/users", {
+        cache: "no-store",
+      });
 
       const responseText = await response.text();
 
@@ -95,9 +89,7 @@ export default function UsersPage() {
 
       try {
         result = responseText
-          ? (JSON.parse(responseText) as
-              | UsersApiResponse
-              | User[])
+          ? (JSON.parse(responseText) as UsersApiResponse | User[])
           : null;
       } catch {
         result = null;
@@ -105,9 +97,9 @@ export default function UsersPage() {
 
       if (!response.ok) {
         const apiMessage =
-          result &&
-          !Array.isArray(result) &&
-          (result.message || result.error);
+          result && !Array.isArray(result)
+            ? result.message || result.error
+            : null;
 
         throw new Error(
           apiMessage ||
@@ -146,12 +138,7 @@ export default function UsersPage() {
     }
 
     return users.filter((user) =>
-      [
-        user.name,
-        user.email,
-        user.role,
-        user.status,
-      ]
+      [user.name, user.email, user.role, user.status]
         .join(" ")
         .toLowerCase()
         .includes(normalizedSearch),
@@ -163,10 +150,7 @@ export default function UsersPage() {
     Math.ceil(filteredUsers.length / ITEMS_PER_PAGE),
   );
 
-  const validCurrentPage = Math.min(
-    currentPage,
-    totalPages,
-  );
+  const validCurrentPage = Math.min(currentPage, totalPages);
 
   const startIndex =
     (validCurrentPage - 1) * ITEMS_PER_PAGE;
@@ -190,11 +174,11 @@ export default function UsersPage() {
     (user) => user.status.toLowerCase() === "ativo",
   ).length;
 
-  const adminUsers = users.filter(
-    (user) =>
-      user.role.toLowerCase() === "administrador" ||
-      user.role.toLowerCase() === "admin",
-  ).length;
+  const adminUsers = users.filter((user) => {
+    const role = user.role.toLowerCase();
+
+    return role === "administrador" || role === "admin";
+  }).length;
 
   function handleSearch(value: string) {
     setSearch(value);
@@ -283,7 +267,7 @@ export default function UsersPage() {
   }
 
   return (
-    <>
+        <>
       <div className="space-y-8">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-center gap-3">
@@ -465,8 +449,7 @@ export default function UsersPage() {
                     <TableBody>
                       {visibleUsers.map((user) => {
                         const isActive =
-                          user.status.toLowerCase() ===
-                          "ativo";
+                          user.status.toLowerCase() === "ativo";
 
                         const isChanging =
                           changingId === user.id;
@@ -479,9 +462,7 @@ export default function UsersPage() {
                             <TableCell className="px-6">
                               <div className="flex items-center gap-3">
                                 <div className="grid size-10 place-items-center rounded-xl bg-indigo-500/15 font-semibold text-indigo-300">
-                                  {user.name
-                                    .charAt(0)
-                                    .toUpperCase()}
+                                  {user.name.charAt(0).toUpperCase()}
                                 </div>
 
                                 <div>
@@ -490,8 +471,7 @@ export default function UsersPage() {
                                   </p>
 
                                   <p className="mt-1 text-xs text-slate-500">
-                                    ID:{" "}
-                                    {user.id.slice(0, 8)}
+                                    ID: {user.id.slice(0, 8)}
                                   </p>
                                 </div>
                               </div>
@@ -594,8 +574,8 @@ export default function UsersPage() {
                               </h2>
 
                               <p className="mt-2 text-sm text-slate-400">
-                                Tente alterar a busca ou
-                                cadastre um novo usuário.
+                                Tente alterar a busca ou cadastre um novo
+                                usuário.
                               </p>
                             </div>
                           </TableCell>
@@ -649,9 +629,7 @@ export default function UsersPage() {
                       <Button
                         type="button"
                         variant="outline"
-                        disabled={
-                          validCurrentPage >= totalPages
-                        }
+                        disabled={validCurrentPage >= totalPages}
                         onClick={goToNextPage}
                         className="gap-2 border-slate-700 bg-slate-900 text-slate-300 hover:bg-slate-800 hover:text-white disabled:text-slate-600"
                       >
@@ -678,15 +656,13 @@ export default function UsersPage() {
         <AlertDialogContent className="border-slate-800 bg-slate-950 text-white">
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {selectedUser?.status.toLowerCase() ===
-              "ativo"
+              {selectedUser?.status.toLowerCase() === "ativo"
                 ? "Desativar usuário"
                 : "Reativar usuário"}
             </AlertDialogTitle>
 
             <AlertDialogDescription className="text-slate-400">
-              {selectedUser?.status.toLowerCase() ===
-              "ativo"
+              {selectedUser?.status.toLowerCase() === "ativo"
                 ? `Tem certeza que deseja desativar o usuário ${selectedUser?.name}?`
                 : `Tem certeza que deseja reativar o usuário ${selectedUser?.name}?`}
             </AlertDialogDescription>
@@ -704,8 +680,7 @@ export default function UsersPage() {
               onClick={confirmStatusChange}
               disabled={Boolean(changingId)}
               className={
-                selectedUser?.status.toLowerCase() ===
-                "ativo"
+                selectedUser?.status.toLowerCase() === "ativo"
                   ? "bg-rose-600 text-white hover:bg-rose-500"
                   : "bg-emerald-600 text-white hover:bg-emerald-500"
               }
@@ -715,8 +690,7 @@ export default function UsersPage() {
                   <Loader2 className="size-4 animate-spin" />
                   Aguarde...
                 </>
-              ) : selectedUser?.status.toLowerCase() ===
-                "ativo" ? (
+              ) : selectedUser?.status.toLowerCase() === "ativo" ? (
                 "Desativar"
               ) : (
                 "Reativar"
