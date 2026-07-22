@@ -1,5 +1,6 @@
 import {
   Activity,
+  ArrowUpRight,
   Building2,
   CircleCheckBig,
   CircleX,
@@ -27,27 +28,66 @@ interface Dashboard {
   }[];
 }
 
+const emptyDashboard: Dashboard = {
+  totalCompanies: 0,
+  activeCompanies: 0,
+  inactiveCompanies: 0,
+  plans: [],
+};
+
 async function getDashboard(): Promise<Dashboard> {
-  const response = await fetch("http://localhost:3333/dashboard", {
-    cache: "no-store",
-  });
+  try {
+    const response = await fetch("http://localhost:3333/dashboard", {
+      cache: "no-store",
+    });
 
-  if (!response.ok) {
-    throw new Error("Não foi possível carregar os dados do dashboard.");
+    if (!response.ok) {
+      return emptyDashboard;
+    }
+
+    return response.json();
+  } catch {
+    return emptyDashboard;
   }
-
-  return response.json();
 }
 
 export default async function DashboardPage() {
   const dashboard = await getDashboard();
 
+  const activePercentage =
+    dashboard.totalCompanies > 0
+      ? Math.round(
+          (dashboard.activeCompanies / dashboard.totalCompanies) * 100,
+        )
+      : 0;
+
   return (
     <div className="space-y-8">
+      <section className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div>
+          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-indigo-400">
+            Visão geral
+          </p>
+
+          <h1 className="mt-2 text-3xl font-bold tracking-tight text-white">
+            Dashboard
+          </h1>
+
+          <p className="mt-2 text-base text-slate-300">
+            Acompanhe os principais indicadores do FlowTwo.
+          </p>
+        </div>
+
+        <div className="inline-flex items-center gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-2 text-sm font-medium text-emerald-300">
+          <CircleCheckBig className="size-4" />
+          Sistema operacional
+        </div>
+      </section>
+
       <section className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
-        <Card className="border-slate-800 bg-slate-900/90">
+        <Card className="border-slate-700 bg-slate-900/90 shadow-lg shadow-black/10">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-            <CardTitle className="text-sm font-medium text-slate-400">
+            <CardTitle className="text-sm font-semibold text-slate-300">
               Total de empresas
             </CardTitle>
 
@@ -61,15 +101,15 @@ export default async function DashboardPage() {
               {dashboard.totalCompanies}
             </div>
 
-            <p className="mt-2 text-sm text-slate-400">
+            <p className="mt-2 text-sm text-slate-300">
               Empresas cadastradas na plataforma.
             </p>
           </CardContent>
         </Card>
 
-        <Card className="border-slate-800 bg-slate-900/90">
+        <Card className="border-slate-700 bg-slate-900/90 shadow-lg shadow-black/10">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-            <CardTitle className="text-sm font-medium text-slate-400">
+            <CardTitle className="text-sm font-semibold text-slate-300">
               Empresas ativas
             </CardTitle>
 
@@ -83,15 +123,15 @@ export default async function DashboardPage() {
               {dashboard.activeCompanies}
             </div>
 
-            <p className="mt-2 text-sm text-slate-400">
-              Empresas utilizando o sistema.
+            <p className="mt-2 text-sm text-slate-300">
+              {activePercentage}% das empresas estão ativas.
             </p>
           </CardContent>
         </Card>
 
-        <Card className="border-slate-800 bg-slate-900/90">
+        <Card className="border-slate-700 bg-slate-900/90 shadow-lg shadow-black/10">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-            <CardTitle className="text-sm font-medium text-slate-400">
+            <CardTitle className="text-sm font-semibold text-slate-300">
               Empresas inativas
             </CardTitle>
 
@@ -105,15 +145,15 @@ export default async function DashboardPage() {
               {dashboard.inactiveCompanies}
             </div>
 
-            <p className="mt-2 text-sm text-slate-400">
-              Empresas sem atividade recente.
+            <p className="mt-2 text-sm text-slate-300">
+              Empresas que precisam de acompanhamento.
             </p>
           </CardContent>
         </Card>
 
-        <Card className="border-slate-800 bg-slate-900/90">
+        <Card className="border-slate-700 bg-gradient-to-br from-indigo-600/20 to-violet-600/20 shadow-lg shadow-black/10">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-            <CardTitle className="text-sm font-medium text-slate-400">
+            <CardTitle className="text-sm font-semibold text-slate-200">
               Crescimento
             </CardTitle>
 
@@ -123,23 +163,26 @@ export default async function DashboardPage() {
           </CardHeader>
 
           <CardContent>
-            <div className="text-4xl font-bold text-cyan-400">+18%</div>
+            <div className="text-4xl font-bold text-cyan-300">
+              +18%
+            </div>
 
-            <p className="mt-2 text-sm text-slate-400">
-              Comparado ao período anterior.
+            <p className="mt-2 flex items-center gap-1 text-sm text-slate-300">
+              Comparado ao período anterior
+              <ArrowUpRight className="size-4" />
             </p>
           </CardContent>
         </Card>
       </section>
 
-      <section className="grid gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(300px,1fr)]">
-        <Card className="border-slate-800 bg-slate-900/90">
+      <section className="grid gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)]">
+        <Card className="border-slate-700 bg-slate-900/90 shadow-lg shadow-black/10">
           <CardHeader>
             <CardTitle className="text-white">
               Crescimento de empresas
             </CardTitle>
 
-            <CardDescription className="text-slate-400">
+            <CardDescription className="text-slate-300">
               Evolução dos cadastros nos últimos seis meses.
             </CardDescription>
           </CardHeader>
@@ -149,11 +192,13 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-slate-800 bg-slate-900/90">
+        <Card className="border-slate-700 bg-slate-900/90 shadow-lg shadow-black/10">
           <CardHeader>
-            <CardTitle className="text-white">Atividade recente</CardTitle>
+            <CardTitle className="text-white">
+              Atividade recente
+            </CardTitle>
 
-            <CardDescription className="text-slate-400">
+            <CardDescription className="text-slate-300">
               Últimas movimentações da plataforma.
             </CardDescription>
           </CardHeader>
@@ -165,15 +210,20 @@ export default async function DashboardPage() {
               "Novo usuário convidado",
               "Projeto criado pela equipe",
             ].map((item, index) => (
-              <div key={item} className="flex items-start gap-3">
+              <div
+                key={item}
+                className="flex items-start gap-3 rounded-xl border border-slate-800 bg-slate-950/50 p-3"
+              >
                 <div className="mt-0.5 rounded-lg bg-indigo-500/15 p-2 text-indigo-300">
                   <Activity size={16} />
                 </div>
 
                 <div>
-                  <p className="text-sm font-medium text-slate-200">{item}</p>
+                  <p className="text-sm font-medium text-slate-100">
+                    {item}
+                  </p>
 
-                  <p className="mt-1 text-xs text-slate-500">
+                  <p className="mt-1 text-xs text-slate-400">
                     {index + 1} hora{index === 0 ? "" : "s"} atrás
                   </p>
                 </div>
@@ -183,11 +233,13 @@ export default async function DashboardPage() {
         </Card>
       </section>
 
-      <Card className="overflow-hidden border-slate-800 bg-slate-900/90">
-        <CardHeader className="border-b border-slate-800">
-          <CardTitle className="text-white">Empresas por plano</CardTitle>
+      <Card className="overflow-hidden border-slate-700 bg-slate-900/90 shadow-lg shadow-black/10">
+        <CardHeader className="border-b border-slate-700">
+          <CardTitle className="text-white">
+            Empresas por plano
+          </CardTitle>
 
-          <CardDescription className="text-slate-400">
+          <CardDescription className="text-slate-300">
             Distribuição das empresas entre os planos disponíveis.
           </CardDescription>
         </CardHeader>
@@ -195,17 +247,17 @@ export default async function DashboardPage() {
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[520px]">
-              <thead className="bg-slate-950/60">
-                <tr className="border-b border-slate-800">
-                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+              <thead className="bg-slate-950/70">
+                <tr className="border-b border-slate-700">
+                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-300">
                     Plano
                   </th>
 
-                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-300">
                     Quantidade
                   </th>
 
-                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-300">
                     Participação
                   </th>
                 </tr>
@@ -223,26 +275,26 @@ export default async function DashboardPage() {
                   return (
                     <tr
                       key={plan.plan}
-                      className="border-b border-slate-800/80 transition hover:bg-slate-800/40"
+                      className="border-b border-slate-800 transition hover:bg-slate-800/50"
                     >
-                      <td className="px-6 py-4 font-medium text-white">
+                      <td className="px-6 py-4 font-semibold text-white">
                         {plan.plan}
                       </td>
 
-                      <td className="px-6 py-4 text-slate-300">
+                      <td className="px-6 py-4 text-slate-200">
                         {plan._count.plan}
                       </td>
 
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
-                          <div className="h-2 w-32 overflow-hidden rounded-full bg-slate-800">
+                          <div className="h-2.5 w-36 overflow-hidden rounded-full bg-slate-800">
                             <div
-                              className="h-full rounded-full bg-indigo-500"
+                              className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-violet-500"
                               style={{ width: `${percentage}%` }}
                             />
                           </div>
 
-                          <span className="text-sm text-slate-400">
+                          <span className="text-sm font-medium text-slate-300">
                             {percentage}%
                           </span>
                         </div>
@@ -255,7 +307,7 @@ export default async function DashboardPage() {
                   <tr>
                     <td
                       colSpan={3}
-                      className="px-6 py-10 text-center text-slate-500"
+                      className="px-6 py-12 text-center text-slate-400"
                     >
                       Nenhum plano encontrado.
                     </td>
