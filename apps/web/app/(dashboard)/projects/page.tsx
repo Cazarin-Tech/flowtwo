@@ -1,7 +1,37 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import {
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  CircleDot,
+  FolderKanban,
+  Loader2,
+  Plus,
+  RefreshCw,
+  Search,
+} from "lucide-react";
+import { toast } from "sonner";
+
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 interface Task {
   id: string;
@@ -29,27 +59,33 @@ interface Pagination {
 interface ProjectsResponse {
   data: Project[];
   pagination: Pagination;
+  message?: string;
+  error?: string;
 }
+
+const initialPagination: Pagination = {
+  page: 1,
+  limit: 10,
+  total: 0,
+  totalPages: 1,
+};
 
 export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([]);
-  const [pagination, setPagination] = useState<Pagination>({
-    page: 1,
-    limit: 10,
-    total: 0,
-    totalPages: 1,
-  });
+  const [pagination, setPagination] =
+    useState<Pagination>(initialPagination);
 
   const [page, setPage] = useState(1);
+  const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
-  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
 
   useEffect(() => {
     async function loadProjects() {
-      setLoading(true);
-      setMessage("");
-
       try {
+        setLoading(true);
+        setError("");
+
         const response = await fetch(
           `http://localhost:3333/projects?page=${page}&limit=10`,
           {
@@ -57,17 +93,37 @@ export default function ProjectsPage() {
           },
         );
 
-        const data: ProjectsResponse = await response.json();
+        const responseText = await response.text();
 
-        if (!response.ok) {
-          setMessage("Erro ao carregar projetos.");
-          return;
+        let result: ProjectsResponse | null = null;
+
+        try {
+          result = responseText
+            ? (JSON.parse(responseText) as ProjectsResponse)
+            : null;
+        } catch {
+          result = null;
         }
 
-        setProjects(data.data);
-        setPagination(data.pagination);
-      } catch {
-        setMessage("Não foi possível conectar com a API.");
+        if (!response.ok) {
+          throw new Error(
+            result?.message ||
+              result?.error ||
+              responseText ||
+              "Não foi possível carregar os projetos.",
+          );
+        }
+
+        setProjects(result?.data ?? []);
+        setPagination(result?.pagination ?? initialPagination);
+      } catch (requestError) {
+        const message =
+          requestError instanceof Error
+            ? requestError.message
+            : "Não foi possível conectar com a API.";
+
+        setError(message);
+        toast.error(message);
       } finally {
         setLoading(false);
       }
@@ -76,408 +132,413 @@ export default function ProjectsPage() {
     loadProjects();
   }, [page]);
 
-  function getStatusStyle(status: string): React.CSSProperties {
-    if (status === "Ativo") {
+  const filteredProjects = useMemo(() => {
+    const normalizedSearch = search.trim().toLowerCase();
+
+    if (!normalizedSearch) {
+      return projects;
+    }
+
+    return projects.filter((project) =>
+      [
+        project.name,
+        project.description,
+        project.status,
+        ...project.tasks.map((task) => task.title),
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase()
+        .includes(normalizedSearch),
+    );
+  }, [projects, search]);
+
+  const activeProjects = projects.filter(
+    (project) => project.status.toLowerCase() === "ativo",
+  ).length;
+
+  const completedProjects = projects.filter((project) => {
+    const status = project.status.toLowerCase();
+
+    return status === "concluido" || status === "concluído";
+  }).length;
+
+  function getStatusBadge(projectStatus: string) {
+    const status = projectStatus.toLowerCase();
+
+    if (status === "ativo") {
       return {
-        color: "#86efac",
-        background: "rgba(34,197,94,0.12)",
-        border: "1px solid rgba(34,197,94,0.25)",
+        label: "Ativo",
+        className:
+          "border-emerald-500/30 bg-emerald-500/10 text-emerald-300",
       };
     }
 
-    if (status === "Concluido") {
+    if (status === "concluido" || status === "concluído") {
       return {
-        color: "#93c5fd",
-        background: "rgba(59,130,246,0.12)",
-        border: "1px solid rgba(59,130,246,0.25)",
+        label: "Concluído",
+        className:
+          "border-blue-500/30 bg-blue-500/10 text-blue-300",
       };
     }
 
     return {
-      color: "#fde68a",
-      background: "rgba(234,179,8,0.12)",
-      border: "1px solid rgba(234,179,8,0.25)",
+      label: projectStatus,
+      className:
+        "border-amber-500/30 bg-amber-500/10 text-amber-300",
     };
   }
 
+  function goToPreviousPage() {
+    setPage((currentPage) => Math.max(1, currentPage - 1));
+  }
+
+  function goToNextPage() {
+    setPage((currentPage) =>
+      Math.min(pagination.totalPages, currentPage + 1),
+    );
+  }
+
   return (
-    <div
-      style={{
-        maxWidth: "1200px",
-        margin: "0 auto",
-        color: "#f8fafc",
-        fontFamily: "Arial, sans-serif",
-      }}
-    >
-      <header
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "flex-start",
-          gap: "20px",
-          marginBottom: "30px",
-        }}
-      >
-        <div>
-          <span
-            style={{
-              color: "#60a5fa",
-              fontSize: "12px",
-              fontWeight: 700,
-              letterSpacing: "0.14em",
-              textTransform: "uppercase",
-            }}
-          >
-            Gerenciamento
-          </span>
+    <div className="space-y-8">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex items-center gap-3">
+          <div className="rounded-xl bg-indigo-500/15 p-3 text-indigo-300">
+            <FolderKanban className="size-6" />
+          </div>
 
-          <h1
-            style={{
-              margin: "8px 0",
-              fontSize: "36px",
-            }}
-          >
-            Projetos
-          </h1>
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-indigo-400">
+              Gerenciamento
+            </p>
 
-          <p
-            style={{
-              margin: 0,
-              color: "#94a3b8",
-            }}
-          >
-            Visualize e gerencie os projetos cadastrados.
-          </p>
-        </div>
+            <h1 className="mt-1 text-3xl font-bold tracking-tight text-white">
+              Projetos
+            </h1>
 
-        <Link
-          href="/projects/new"
-          style={{
-            padding: "12px 18px",
-            borderRadius: "10px",
-            color: "#ffffff",
-            fontWeight: 700,
-            textDecoration: "none",
-            background: "linear-gradient(135deg, #2563eb, #7c3aed)",
-          }}
-        >
-          Novo projeto
-        </Link>
-      </header>
-
-      <section
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-          gap: "16px",
-          marginBottom: "24px",
-        }}
-      >
-        <SummaryCard
-          label="Total de projetos"
-          value={pagination.total}
-        />
-
-        <SummaryCard
-          label="Página atual"
-          value={`${pagination.page} de ${pagination.totalPages}`}
-        />
-
-        <SummaryCard
-          label="Exibidos nesta página"
-          value={projects.length}
-        />
-      </section>
-
-      {message && (
-        <div
-          style={{
-            marginBottom: "20px",
-            padding: "14px",
-            borderRadius: "10px",
-            color: "#fecaca",
-            background: "rgba(239,68,68,0.12)",
-            border: "1px solid rgba(239,68,68,0.2)",
-          }}
-        >
-          {message}
-        </div>
-      )}
-
-      {loading ? (
-        <div
-          style={{
-            padding: "32px",
-            borderRadius: "18px",
-            textAlign: "center",
-            color: "#94a3b8",
-            background: "#0f172a",
-            border: "1px solid rgba(148,163,184,0.12)",
-          }}
-        >
-          Carregando projetos...
-        </div>
-      ) : projects.length === 0 ? (
-        <div
-          style={{
-            padding: "40px",
-            borderRadius: "18px",
-            textAlign: "center",
-            background: "#0f172a",
-            border: "1px solid rgba(148,163,184,0.12)",
-          }}
-        >
-          <h2 style={{ marginTop: 0 }}>Nenhum projeto encontrado</h2>
-
-          <p style={{ color: "#94a3b8" }}>
-            Cadastre o primeiro projeto para começar.
-          </p>
-
-          <Link
-            href="/projects/new"
-            style={{
-              display: "inline-block",
-              marginTop: "10px",
-              padding: "12px 18px",
-              borderRadius: "10px",
-              color: "#ffffff",
-              fontWeight: 700,
-              textDecoration: "none",
-              background: "linear-gradient(135deg, #2563eb, #7c3aed)",
-            }}
-          >
-            Criar projeto
-          </Link>
-        </div>
-      ) : (
-        <div
-          style={{
-            overflowX: "auto",
-            borderRadius: "18px",
-            background: "#0f172a",
-            border: "1px solid rgba(148,163,184,0.12)",
-          }}
-        >
-          <table
-            style={{
-              width: "100%",
-              borderCollapse: "collapse",
-              minWidth: "850px",
-            }}
-          >
-            <thead>
-              <tr>
-                <TableHeader>Projeto</TableHeader>
-                <TableHeader>Status</TableHeader>
-                <TableHeader>Tarefas</TableHeader>
-                <TableHeader>Criado em</TableHeader>
-                <TableHeader>Ações</TableHeader>
-              </tr>
-            </thead>
-
-            <tbody>
-              {projects.map((project) => (
-                <tr
-                  key={project.id}
-                  style={{
-                    borderTop: "1px solid rgba(148,163,184,0.1)",
-                  }}
-                >
-                  <td style={tableCellStyle}>
-                    <strong
-                      style={{
-                        display: "block",
-                        marginBottom: "6px",
-                        overflowWrap: "anywhere",
-                      }}
-                    >
-                      {project.name}
-                    </strong>
-
-                    <span
-                      style={{
-                        display: "block",
-                        maxWidth: "380px",
-                        color: "#94a3b8",
-                        fontSize: "13px",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      {project.description || "Sem descrição"}
-                    </span>
-                  </td>
-
-                  <td style={tableCellStyle}>
-                    <span
-                      style={{
-                        display: "inline-flex",
-                        padding: "6px 10px",
-                        borderRadius: "999px",
-                        fontSize: "12px",
-                        fontWeight: 700,
-                        ...getStatusStyle(project.status),
-                      }}
-                    >
-                      {project.status === "Concluido"
-                        ? "Concluído"
-                        : project.status}
-                    </span>
-                  </td>
-
-                  <td style={tableCellStyle}>
-                    {project.tasks.length}{" "}
-                    {project.tasks.length === 1 ? "tarefa" : "tarefas"}
-                  </td>
-
-                  <td style={tableCellStyle}>
-                    {new Date(project.createdAt).toLocaleDateString("pt-BR")}
-                  </td>
-
-                  <td style={tableCellStyle}>
-                    <Link
-                      href={`/projects/${project.id}`}
-                      style={{
-                        color: "#93c5fd",
-                        fontWeight: 700,
-                        textDecoration: "none",
-                      }}
-                    >
-                      Ver detalhes
-                    </Link>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {!loading && pagination.totalPages > 1 && (
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            gap: "16px",
-            marginTop: "22px",
-          }}
-        >
-          <span
-            style={{
-              color: "#94a3b8",
-              fontSize: "14px",
-            }}
-          >
-            Página {pagination.page} de {pagination.totalPages}
-          </span>
-
-          <div
-            style={{
-              display: "flex",
-              gap: "10px",
-            }}
-          >
-            <button
-              type="button"
-              onClick={() => setPage((current) => current - 1)}
-              disabled={page <= 1}
-              style={paginationButtonStyle(page <= 1)}
-            >
-              Anterior
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setPage((current) => current + 1)}
-              disabled={page >= pagination.totalPages}
-              style={paginationButtonStyle(
-                page >= pagination.totalPages,
-              )}
-            >
-              Próxima
-            </button>
+            <p className="mt-1 text-sm text-slate-400">
+              Visualize e gerencie os projetos cadastrados.
+            </p>
           </div>
         </div>
-      )}
+
+        <Button
+          nativeButton={false}
+          render={<Link href="/projects/new" />}
+          className="gap-2 bg-indigo-600 text-white hover:bg-indigo-500"
+        >
+          <Plus className="size-4" />
+          Novo projeto
+        </Button>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card className="border-slate-800 bg-slate-900">
+          <CardContent className="p-6">
+            <p className="text-sm text-slate-400">
+              Total de projetos
+            </p>
+
+            <div className="mt-3 flex items-center justify-between">
+              <h2 className="text-3xl font-bold text-white">
+                {pagination.total}
+              </h2>
+
+              <FolderKanban className="size-6 text-indigo-400" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-slate-800 bg-slate-900">
+          <CardContent className="p-6">
+            <p className="text-sm text-slate-400">
+              Projetos ativos nesta página
+            </p>
+
+            <div className="mt-3 flex items-center justify-between">
+              <h2 className="text-3xl font-bold text-emerald-400">
+                {activeProjects}
+              </h2>
+
+              <CircleDot className="size-6 text-emerald-400" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-slate-800 bg-slate-900">
+          <CardContent className="p-6">
+            <p className="text-sm text-slate-400">
+              Projetos concluídos nesta página
+            </p>
+
+            <div className="mt-3 flex items-center justify-between">
+              <h2 className="text-3xl font-bold text-blue-400">
+                {completedProjects}
+              </h2>
+
+              <CheckCircle2 className="size-6 text-blue-400" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card className="border-slate-800 bg-slate-900/90">
+        <CardHeader className="gap-5 border-b border-slate-800">
+          <div>
+            <CardTitle className="text-white">
+              Projetos cadastrados
+            </CardTitle>
+
+            <CardDescription className="mt-1 text-slate-400">
+              Consulte o status, tarefas e informações dos projetos.
+            </CardDescription>
+          </div>
+
+          <div className="flex max-w-xl flex-col gap-3 sm:flex-row">
+            <div className="relative flex-1">
+              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-500" />
+
+              <input
+                type="search"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Buscar por nome, descrição, status ou tarefa..."
+                className="flex h-10 w-full rounded-md border border-slate-700 bg-slate-950 py-2 pl-10 pr-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+              />
+            </div>
+
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setPage(1);
+                window.location.reload();
+              }}
+              disabled={loading}
+              className="gap-2 border-slate-700 bg-slate-900 text-slate-300 hover:bg-slate-800 hover:text-white"
+            >
+              <RefreshCw
+                className={`size-4 ${loading ? "animate-spin" : ""}`}
+              />
+              Atualizar
+            </Button>
+          </div>
+
+          <p className="text-sm text-slate-400">
+            {filteredProjects.length}{" "}
+            {filteredProjects.length === 1
+              ? "projeto exibido"
+              : "projetos exibidos"}{" "}
+            nesta página
+          </p>
+        </CardHeader>
+
+        <CardContent className="p-0">
+          {loading ? (
+            <div className="flex min-h-64 items-center justify-center gap-3 text-slate-400">
+              <Loader2 className="size-5 animate-spin" />
+              Carregando projetos...
+            </div>
+          ) : error ? (
+            <div className="flex min-h-64 flex-col items-center justify-center gap-4 px-6 text-center">
+              <p className="text-rose-400">{error}</p>
+
+              <Button
+                type="button"
+                onClick={() => window.location.reload()}
+                className="gap-2 bg-indigo-600 text-white hover:bg-indigo-500"
+              >
+                <RefreshCw className="size-4" />
+                Tentar novamente
+              </Button>
+            </div>
+          ) : (
+                        <>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-slate-800 hover:bg-transparent">
+                      <TableHead className="px-6 text-slate-400">
+                        Projeto
+                      </TableHead>
+
+                      <TableHead className="text-slate-400">
+                        Status
+                      </TableHead>
+
+                      <TableHead className="text-slate-400">
+                        Tarefas
+                      </TableHead>
+
+                      <TableHead className="text-slate-400">
+                        Criado em
+                      </TableHead>
+
+                      <TableHead className="px-6 text-right text-slate-400">
+                        Ações
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+
+                  <TableBody>
+                    {filteredProjects.map((project) => {
+                      const statusBadge = getStatusBadge(project.status);
+
+                      return (
+                        <TableRow
+                          key={project.id}
+                          className="border-slate-800 hover:bg-slate-800/40"
+                        >
+                          <TableCell className="px-6">
+                            <div className="flex items-center gap-3">
+                              <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-indigo-500/15 text-indigo-300">
+                                <FolderKanban className="size-5" />
+                              </div>
+
+                              <div className="min-w-0">
+                                <p className="font-semibold text-white">
+                                  {project.name}
+                                </p>
+
+                                <p className="mt-1 max-w-md truncate text-xs text-slate-500">
+                                  {project.description || "Sem descrição"}
+                                </p>
+                              </div>
+                            </div>
+                          </TableCell>
+
+                          <TableCell>
+                            <Badge
+                              variant="outline"
+                              className={statusBadge.className}
+                            >
+                              {statusBadge.label}
+                            </Badge>
+                          </TableCell>
+
+                          <TableCell className="text-slate-300">
+                            {project.tasks.length}{" "}
+                            {project.tasks.length === 1
+                              ? "tarefa"
+                              : "tarefas"}
+                          </TableCell>
+
+                          <TableCell className="text-slate-300">
+                            {new Date(
+                              project.createdAt,
+                            ).toLocaleDateString("pt-BR")}
+                          </TableCell>
+
+                          <TableCell className="px-6 text-right">
+                            <Button
+                              nativeButton={false}
+                              render={
+                                <Link
+                                  href={`/projects/${project.id}`}
+                                />
+                              }
+                              variant="ghost"
+                              className="text-slate-300 hover:bg-slate-800 hover:text-white"
+                            >
+                              Ver detalhes
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+
+                    {filteredProjects.length === 0 && (
+                      <TableRow className="border-slate-800">
+                        <TableCell
+                          colSpan={5}
+                          className="px-6 py-16 text-center"
+                        >
+                          <div className="mx-auto max-w-sm">
+                            <div className="mx-auto grid size-14 place-items-center rounded-2xl bg-slate-800 text-slate-400">
+                              <FolderKanban className="size-6" />
+                            </div>
+
+                            <h2 className="mt-4 text-lg font-semibold text-white">
+                              Nenhum projeto encontrado
+                            </h2>
+
+                            <p className="mt-2 text-sm text-slate-400">
+                              {search
+                                ? "Tente alterar o termo da busca."
+                                : "Cadastre o primeiro projeto para começar."}
+                            </p>
+
+                            {!search && (
+                              <Button
+                                nativeButton={false}
+                                render={<Link href="/projects/new" />}
+                                className="mt-5 gap-2 bg-indigo-600 text-white hover:bg-indigo-500"
+                              >
+                                <Plus className="size-4" />
+                                Criar projeto
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {pagination.totalPages > 1 && (
+                <div className="flex flex-col gap-4 border-t border-slate-800 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
+                  <p className="text-sm text-slate-400">
+                    Página{" "}
+                    <strong className="font-medium text-slate-200">
+                      {pagination.page}
+                    </strong>{" "}
+                    de{" "}
+                    <strong className="font-medium text-slate-200">
+                      {pagination.totalPages}
+                    </strong>
+                  </p>
+
+                  <div className="flex items-center gap-3">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={page <= 1}
+                      onClick={goToPreviousPage}
+                      className="gap-2 border-slate-700 bg-slate-900 text-slate-300 hover:bg-slate-800 hover:text-white disabled:text-slate-600"
+                    >
+                      <ChevronLeft className="size-4" />
+                      Anterior
+                    </Button>
+
+                    <span className="min-w-28 text-center text-sm text-slate-400">
+                      Página{" "}
+                      <strong className="text-slate-200">
+                        {pagination.page}
+                      </strong>{" "}
+                      de{" "}
+                      <strong className="text-slate-200">
+                        {pagination.totalPages}
+                      </strong>
+                    </span>
+
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={page >= pagination.totalPages}
+                      onClick={goToNextPage}
+                      className="gap-2 border-slate-700 bg-slate-900 text-slate-300 hover:bg-slate-800 hover:text-white disabled:text-slate-600"
+                    >
+                      Próxima
+                      <ChevronRight className="size-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
-
-function SummaryCard({
-  label,
-  value,
-}: {
-  label: string;
-  value: string | number;
-}) {
-  return (
-    <div
-      style={{
-        padding: "20px",
-        borderRadius: "16px",
-        background: "#0f172a",
-        border: "1px solid rgba(148,163,184,0.12)",
-      }}
-    >
-      <span
-        style={{
-          display: "block",
-          marginBottom: "8px",
-          color: "#94a3b8",
-          fontSize: "13px",
-        }}
-      >
-        {label}
-      </span>
-
-      <strong
-        style={{
-          fontSize: "26px",
-        }}
-      >
-        {value}
-      </strong>
-    </div>
-  );
-}
-
-function TableHeader({ children }: { children: React.ReactNode }) {
-  return (
-    <th
-      style={{
-        padding: "16px",
-        color: "#94a3b8",
-        fontSize: "12px",
-        textAlign: "left",
-        textTransform: "uppercase",
-        letterSpacing: "0.08em",
-      }}
-    >
-      {children}
-    </th>
-  );
-}
-
-function paginationButtonStyle(
-  disabled: boolean,
-): React.CSSProperties {
-  return {
-    padding: "10px 16px",
-    borderRadius: "10px",
-    border: "1px solid rgba(148,163,184,0.2)",
-    color: disabled ? "#64748b" : "#f8fafc",
-    fontWeight: 700,
-    cursor: disabled ? "not-allowed" : "pointer",
-    background: disabled ? "#0f172a" : "#1e293b",
-    opacity: disabled ? 0.6 : 1,
-  };
-}
-
-const tableCellStyle: React.CSSProperties = {
-  padding: "16px",
-  color: "#cbd5e1",
-  fontSize: "14px",
-  verticalAlign: "middle",
-};
