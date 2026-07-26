@@ -1,3 +1,21 @@
+import {
+  Activity,
+  ArrowUpRight,
+  Building2,
+  CircleCheckBig,
+  CircleX,
+  TrendingUp,
+} from "lucide-react";
+
+import DashboardChart from "../../../components/dashboard/DashboardChart";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+
 interface Dashboard {
   totalCompanies: number;
   activeCompanies: number;
@@ -10,75 +28,296 @@ interface Dashboard {
   }[];
 }
 
-export default async function DashboardPage() {
-  const response = await fetch("http://localhost:3333/dashboard", {
-    cache: "no-store",
-  });
+const emptyDashboard: Dashboard = {
+  totalCompanies: 0,
+  activeCompanies: 0,
+  inactiveCompanies: 0,
+  plans: [],
+};
 
-  const dashboard: Dashboard = await response.json();
+async function getDashboard(): Promise<Dashboard> {
+  try {
+    const response = await fetch("http://localhost:3333/dashboard", {
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      return emptyDashboard;
+    }
+
+    return response.json();
+  } catch {
+    return emptyDashboard;
+  }
+}
+
+export default async function DashboardPage() {
+  const dashboard = await getDashboard();
+
+  const activePercentage =
+    dashboard.totalCompanies > 0
+      ? Math.round(
+          (dashboard.activeCompanies / dashboard.totalCompanies) * 100,
+        )
+      : 0;
 
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        backgroundColor: "#0f172a",
-        color: "#fff",
-        padding: "40px",
-        fontFamily: "Arial, sans-serif",
-      }}
-    >
-      <h1 style={{ marginBottom: "30px" }}>Dashboard</h1>
+    <div className="space-y-8">
+      <section className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div>
+          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-indigo-400">
+            Visão geral
+          </p>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(3, 250px)",
-          gap: "20px",
-        }}
-      >
-        <div
-          style={{
-            background: "#1e293b",
-            padding: "20px",
-            borderRadius: "12px",
-          }}
-        >
-          <h2>{dashboard.totalCompanies}</h2>
-          <p>Total de Empresas</p>
+          <h1 className="mt-2 text-3xl font-bold tracking-tight text-white">
+            Dashboard
+          </h1>
+
+          <p className="mt-2 text-base text-slate-300">
+            Acompanhe os principais indicadores do FlowTwo.
+          </p>
         </div>
 
-        <div
-          style={{
-            background: "#1e293b",
-            padding: "20px",
-            borderRadius: "12px",
-          }}
-        >
-          <h2>{dashboard.activeCompanies}</h2>
-          <p>Empresas Ativas</p>
+        <div className="inline-flex items-center gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-2 text-sm font-medium text-emerald-300">
+          <CircleCheckBig className="size-4" />
+          Sistema operacional
         </div>
+      </section>
 
-        <div
-          style={{
-            background: "#1e293b",
-            padding: "20px",
-            borderRadius: "12px",
-          }}
-        >
-          <h2>{dashboard.inactiveCompanies}</h2>
-          <p>Empresas Inativas</p>
-        </div>
-      </div>
+      <section className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+        <Card className="border-slate-700 bg-slate-900/90 shadow-lg shadow-black/10">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+            <CardTitle className="text-sm font-semibold text-slate-300">
+              Total de empresas
+            </CardTitle>
 
-      <h2 style={{ marginTop: "40px" }}>Empresas por Plano</h2>
+            <div className="rounded-xl bg-indigo-500/15 p-2.5 text-indigo-300">
+              <Building2 size={20} />
+            </div>
+          </CardHeader>
 
-      <ul>
-        {dashboard.plans.map((plan) => (
-          <li key={plan.plan}>
-            {plan.plan}: {plan._count.plan}
-          </li>
-        ))}
-      </ul>
-    </main>
+          <CardContent>
+            <div className="text-4xl font-bold text-white">
+              {dashboard.totalCompanies}
+            </div>
+
+            <p className="mt-2 text-sm text-slate-300">
+              Empresas cadastradas na plataforma.
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-slate-700 bg-slate-900/90 shadow-lg shadow-black/10">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+            <CardTitle className="text-sm font-semibold text-slate-300">
+              Empresas ativas
+            </CardTitle>
+
+            <div className="rounded-xl bg-emerald-500/15 p-2.5 text-emerald-300">
+              <CircleCheckBig size={20} />
+            </div>
+          </CardHeader>
+
+          <CardContent>
+            <div className="text-4xl font-bold text-emerald-400">
+              {dashboard.activeCompanies}
+            </div>
+
+            <p className="mt-2 text-sm text-slate-300">
+              {activePercentage}% das empresas estão ativas.
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-slate-700 bg-slate-900/90 shadow-lg shadow-black/10">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+            <CardTitle className="text-sm font-semibold text-slate-300">
+              Empresas inativas
+            </CardTitle>
+
+            <div className="rounded-xl bg-rose-500/15 p-2.5 text-rose-300">
+              <CircleX size={20} />
+            </div>
+          </CardHeader>
+
+          <CardContent>
+            <div className="text-4xl font-bold text-rose-400">
+              {dashboard.inactiveCompanies}
+            </div>
+
+            <p className="mt-2 text-sm text-slate-300">
+              Empresas que precisam de acompanhamento.
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-slate-700 bg-gradient-to-br from-indigo-600/20 to-violet-600/20 shadow-lg shadow-black/10">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+            <CardTitle className="text-sm font-semibold text-slate-200">
+              Crescimento
+            </CardTitle>
+
+            <div className="rounded-xl bg-cyan-500/15 p-2.5 text-cyan-300">
+              <TrendingUp size={20} />
+            </div>
+          </CardHeader>
+
+          <CardContent>
+            <div className="text-4xl font-bold text-cyan-300">
+              +18%
+            </div>
+
+            <p className="mt-2 flex items-center gap-1 text-sm text-slate-300">
+              Comparado ao período anterior
+              <ArrowUpRight className="size-4" />
+            </p>
+          </CardContent>
+        </Card>
+      </section>
+
+      <section className="grid gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)]">
+        <Card className="border-slate-700 bg-slate-900/90 shadow-lg shadow-black/10">
+          <CardHeader>
+            <CardTitle className="text-white">
+              Crescimento de empresas
+            </CardTitle>
+
+            <CardDescription className="text-slate-300">
+              Evolução dos cadastros nos últimos seis meses.
+            </CardDescription>
+          </CardHeader>
+
+          <CardContent>
+            <DashboardChart />
+          </CardContent>
+        </Card>
+
+        <Card className="border-slate-700 bg-slate-900/90 shadow-lg shadow-black/10">
+          <CardHeader>
+            <CardTitle className="text-white">
+              Atividade recente
+            </CardTitle>
+
+            <CardDescription className="text-slate-300">
+              Últimas movimentações da plataforma.
+            </CardDescription>
+          </CardHeader>
+
+          <CardContent className="space-y-5">
+            {[
+              "Nova empresa cadastrada",
+              "Plano atualizado para Pro",
+              "Novo usuário convidado",
+              "Projeto criado pela equipe",
+            ].map((item, index) => (
+              <div
+                key={item}
+                className="flex items-start gap-3 rounded-xl border border-slate-800 bg-slate-950/50 p-3"
+              >
+                <div className="mt-0.5 rounded-lg bg-indigo-500/15 p-2 text-indigo-300">
+                  <Activity size={16} />
+                </div>
+
+                <div>
+                  <p className="text-sm font-medium text-slate-100">
+                    {item}
+                  </p>
+
+                  <p className="mt-1 text-xs text-slate-400">
+                    {index + 1} hora{index === 0 ? "" : "s"} atrás
+                  </p>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      </section>
+
+      <Card className="overflow-hidden border-slate-700 bg-slate-900/90 shadow-lg shadow-black/10">
+        <CardHeader className="border-b border-slate-700">
+          <CardTitle className="text-white">
+            Empresas por plano
+          </CardTitle>
+
+          <CardDescription className="text-slate-300">
+            Distribuição das empresas entre os planos disponíveis.
+          </CardDescription>
+        </CardHeader>
+
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[520px]">
+              <thead className="bg-slate-950/70">
+                <tr className="border-b border-slate-700">
+                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-300">
+                    Plano
+                  </th>
+
+                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-300">
+                    Quantidade
+                  </th>
+
+                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-300">
+                    Participação
+                  </th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {dashboard.plans.map((plan) => {
+                  const percentage =
+                    dashboard.totalCompanies > 0
+                      ? Math.round(
+                          (plan._count.plan / dashboard.totalCompanies) * 100,
+                        )
+                      : 0;
+
+                  return (
+                    <tr
+                      key={plan.plan}
+                      className="border-b border-slate-800 transition hover:bg-slate-800/50"
+                    >
+                      <td className="px-6 py-4 font-semibold text-white">
+                        {plan.plan}
+                      </td>
+
+                      <td className="px-6 py-4 text-slate-200">
+                        {plan._count.plan}
+                      </td>
+
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="h-2.5 w-36 overflow-hidden rounded-full bg-slate-800">
+                            <div
+                              className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-violet-500"
+                              style={{ width: `${percentage}%` }}
+                            />
+                          </div>
+
+                          <span className="text-sm font-medium text-slate-300">
+                            {percentage}%
+                          </span>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+
+                {dashboard.plans.length === 0 && (
+                  <tr>
+                    <td
+                      colSpan={3}
+                      className="px-6 py-12 text-center text-slate-400"
+                    >
+                      Nenhum plano encontrado.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   );
 }

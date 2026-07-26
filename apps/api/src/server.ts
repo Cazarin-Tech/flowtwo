@@ -1,6 +1,8 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
+import swaggerUi from "swagger-ui-express";
+import { swaggerSpec } from "./swagger";
 
 import healthRoutes from "./routes/health";
 import projectsRoutes from "./routes/projects";
@@ -23,6 +25,8 @@ app.use(
 );
 
 app.use(express.json());
+
+app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 app.use(healthRoutes);
 app.use(projectsRoutes);
