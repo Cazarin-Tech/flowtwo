@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
@@ -160,7 +160,7 @@ export default function ProjectsPage() {
   const completedProjects = projects.filter((project) => {
     const status = project.status.toLowerCase();
 
-    return status === "concluido" || status === "concluído";
+    return status === "concluido" || status === "concluÃ­do";
   }).length;
 
   function getStatusBadge(projectStatus: string) {
@@ -174,9 +174,9 @@ export default function ProjectsPage() {
       };
     }
 
-    if (status === "concluido" || status === "concluído") {
+    if (status === "concluido" || status === "concluÃ­do") {
       return {
-        label: "Concluído",
+        label: "ConcluÃ­do",
         className:
           "border-blue-500/30 bg-blue-500/10 text-blue-300",
       };
@@ -438,7 +438,7 @@ export default function ProjectsPage() {
                                 />
                               }
                               variant="ghost"
-                              className="text-slate-300 hover:bg-slate-800 hover:text-white"
+                              className="font-semibold !text-white hover:bg-indigo-500/20 hover:!text-white"
                             >
                               Ver detalhes
                             </Button>
@@ -465,7 +465,7 @@ export default function ProjectsPage() {
                             <p className="mt-2 text-sm text-slate-400">
                               {search
                                 ? "Tente alterar o termo da busca."
-                                : "Cadastre o primeiro projeto para começar."}
+                                : "Cadastre o primeiro projeto para comeÃ§ar."}
                             </p>
 
                             {!search && (
@@ -489,7 +489,7 @@ export default function ProjectsPage() {
               {pagination.totalPages > 1 && (
                 <div className="flex flex-col gap-4 border-t border-slate-800 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
                   <p className="text-sm text-slate-400">
-                    Página{" "}
+                    PÃ¡gina{" "}
                     <strong className="font-medium text-slate-200">
                       {pagination.page}
                     </strong>{" "}
@@ -512,7 +512,7 @@ export default function ProjectsPage() {
                     </Button>
 
                     <span className="min-w-28 text-center text-sm text-slate-400">
-                      Página{" "}
+                      PÃ¡gina{" "}
                       <strong className="text-slate-200">
                         {pagination.page}
                       </strong>{" "}
@@ -542,3 +542,5 @@ export default function ProjectsPage() {
     </div>
   );
 }
+
+
