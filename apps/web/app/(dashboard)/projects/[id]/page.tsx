@@ -49,6 +49,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 
+import { EditTaskDialog } from "./components/EditTaskDialog";
 import { NewTaskDialog } from "./components/NewTaskDialog";
 
 const API_URL =
@@ -777,7 +778,12 @@ export default function ProjectDetailsPage() {
             ) : (
               <div className="flex flex-col gap-3">
                 {project.tasks.map((task) => (
-                  <TaskCard key={task.id} task={task} />
+                  <TaskCard
+                    key={task.id}
+                    task={task}
+                    projectId={project.id}
+                    onChanged={loadProject}
+                  />
                 ))}
               </div>
             )}
@@ -828,25 +834,102 @@ function MetricCard({
   );
 }
 
-function TaskCard({ task }: { task: Task }) {
-  return (
-    <article className="rounded-xl border border-slate-700 bg-slate-950/60 p-4 transition-colors hover:bg-slate-800/70">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h3 className="break-words font-semibold text-white">
-            {task.title}
-          </h3>
+function TaskCard({
+  task,
+  projectId,
+  onChanged,
+}: {
+  task: Task;
+  projectId: string;
+  onChanged: () => void | Promise<void>;
+}) {
+  const visual = getTaskVisual(task.status);
 
-          <p className="mt-1 line-clamp-2 text-xs leading-5 text-slate-300">
-            {task.description?.trim() ||
-              "Nenhuma descrição cadastrada."}
-          </p>
+  return (
+    <article
+      className={`group relative overflow-hidden rounded-2xl border border-slate-700 bg-slate-950/70 p-5 transition-all duration-200 hover:-translate-y-1 hover:border-indigo-500/40 hover:bg-slate-900 hover:shadow-xl hover:shadow-black/25`}
+    >
+      <div
+        className={`absolute inset-y-0 left-0 w-1.5 ${visual.barClassName}`}
+        aria-hidden="true"
+      />
+
+      <div className="flex flex-col gap-5 pl-2">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex min-w-0 items-start gap-3">
+            <div
+              className={`mt-0.5 flex size-10 shrink-0 items-center justify-center rounded-xl ${visual.iconClassName}`}
+            >
+              {visual.icon}
+            </div>
+
+            <div className="min-w-0">
+              <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500">
+                Tarefa do projeto
+              </span>
+
+              <h3 className="mt-1 break-words text-base font-bold text-white">
+                {task.title}
+              </h3>
+
+              <p className="mt-2 line-clamp-3 text-sm leading-6 text-slate-300">
+                {task.description?.trim() ||
+                  "Nenhuma descrição cadastrada."}
+              </p>
+            </div>
+          </div>
+
+          <TaskStatusBadge status={task.status} />
         </div>
 
-        <TaskStatusBadge status={task.status} />
+        <div className="flex flex-col gap-3 border-t border-slate-700/80 pt-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-2 text-xs font-medium text-slate-400">
+            <span
+              className={`size-2 rounded-full ${visual.dotClassName}`}
+              aria-hidden="true"
+            />
+            {visual.helperText}
+          </div>
+
+          <EditTaskDialog
+            task={task}
+            projectId={projectId}
+            onChanged={onChanged}
+          />
+        </div>
       </div>
     </article>
   );
+}
+
+function getTaskVisual(status: string) {
+  if (isCompletedStatus(status)) {
+    return {
+      barClassName: "bg-emerald-500",
+      dotClassName: "bg-emerald-400",
+      iconClassName: "bg-emerald-500/15 text-emerald-300",
+      helperText: "Tarefa concluída",
+      icon: <CheckCircle2 className="size-5" />,
+    };
+  }
+
+  if (isInProgressStatus(status)) {
+    return {
+      barClassName: "bg-blue-500",
+      dotClassName: "bg-blue-400",
+      iconClassName: "bg-blue-500/15 text-blue-300",
+      helperText: "Tarefa em andamento",
+      icon: <RefreshCcw className="size-5" />,
+    };
+  }
+
+  return {
+    barClassName: "bg-amber-500",
+    dotClassName: "bg-amber-400",
+    iconClassName: "bg-amber-500/15 text-amber-300",
+    helperText: "Tarefa pendente",
+    icon: <CircleDashed className="size-5" />,
+  };
 }
 
 function EmptyTasksState() {
