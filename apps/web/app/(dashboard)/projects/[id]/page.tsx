@@ -40,13 +40,12 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { AppSection } from "@/components/ui/AppSection";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { LoadingCard } from "@/components/ui/LoadingCard";
+import { MetricCard } from "@/components/ui/MetricCard";
+import { ProgressCard } from "@/components/ui/ProgressCard";
+import { StatsGrid } from "@/components/ui/StatsGrid";
 import { Input } from "@/components/ui/input";
 
 import { EditTaskDialog } from "./components/EditTaskDialog";
@@ -357,7 +356,13 @@ export default function ProjectDetailsPage() {
   }
 
   if (loading) {
-    return <ProjectLoadingState />;
+    return (
+      <div className="mx-auto grid w-full max-w-7xl gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <LoadingCard rows={4} />
+        <LoadingCard rows={4} />
+        <LoadingCard rows={4} className="hidden xl:block" />
+      </div>
+    );
   }
 
   if (!project) {
@@ -373,22 +378,15 @@ export default function ProjectDetailsPage() {
           Voltar para projetos
         </Button>
 
-        <Card className="border-slate-700 bg-slate-900">
-          <CardContent className="flex min-h-80 flex-col items-center justify-center p-8 text-center">
-            <div className="mb-4 flex size-14 items-center justify-center rounded-2xl bg-rose-500/15 text-rose-300">
-              <AlertCircle className="size-7" />
-            </div>
-
-            <h1 className="text-xl font-semibold text-white">
-              Projeto não encontrado
-            </h1>
-
-            <p className="mt-2 max-w-lg text-sm leading-6 text-slate-300">
-              {errorMessage ||
-                "Não foi possível localizar os dados deste projeto."}
-            </p>
-
-            <div className="mt-6 flex flex-wrap justify-center gap-2">
+        <EmptyState
+          icon={<AlertCircle />}
+          title="Projeto não encontrado"
+          description={
+            errorMessage ||
+            "Não foi possível localizar os dados deste projeto."
+          }
+          action={
+            <div className="flex flex-wrap justify-center gap-2">
               <Button
                 type="button"
                 variant="outline"
@@ -408,8 +406,8 @@ export default function ProjectDetailsPage() {
                 Ver projetos
               </Button>
             </div>
-          </CardContent>
-        </Card>
+          }
+        />
       </div>
     );
   }
@@ -541,7 +539,7 @@ export default function ProjectDetailsPage() {
         </div>
       )}
 
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <StatsGrid>
         <MetricCard
           title="Total de tarefas"
           value={taskMetrics.total}
@@ -556,6 +554,7 @@ export default function ProjectDetailsPage() {
           description="Finalizadas"
           icon={<CheckCircle2 />}
           iconClassName="bg-emerald-500/15 text-emerald-300"
+          valueClassName="text-emerald-400"
         />
 
         <MetricCard
@@ -564,6 +563,7 @@ export default function ProjectDetailsPage() {
           description="Sendo executadas"
           icon={<RefreshCcw />}
           iconClassName="bg-blue-500/15 text-blue-300"
+          valueClassName="text-blue-400"
         />
 
         <MetricCard
@@ -572,81 +572,22 @@ export default function ProjectDetailsPage() {
           description="Ainda não concluídas"
           icon={<CircleDashed />}
           iconClassName="bg-amber-500/15 text-amber-300"
+          valueClassName="text-amber-400"
         />
-      </section>
+      </StatsGrid>
 
-      <Card className="border-slate-700 bg-slate-900">
-        <CardHeader>
-          <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
-            <div>
-              <CardTitle className="text-white">
-                Progresso do projeto
-              </CardTitle>
-
-              <CardDescription className="text-slate-300">
-                Calculado pelas tarefas concluídas.
-              </CardDescription>
-            </div>
-
-            <strong className="text-3xl font-bold text-white">
-              {taskMetrics.progress}%
-            </strong>
-          </div>
-        </CardHeader>
-
-        <CardContent>
-          <div
-            className="h-3 overflow-hidden rounded-full bg-slate-800"
-            role="progressbar"
-            aria-valuenow={taskMetrics.progress}
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-label={`Progresso do projeto: ${taskMetrics.progress}%`}
-          >
-            <div
-              className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 transition-[width] duration-500"
-              style={{
-                width: `${taskMetrics.progress}%`,
-              }}
-            />
-          </div>
-
-          <div className="mt-3 flex flex-wrap justify-between gap-2 text-xs text-slate-300">
-            <span>
-              {taskMetrics.completed} de {taskMetrics.total} tarefas
-              concluídas
-            </span>
-
-            {taskMetrics.total === 0 && (
-              <span>
-                Adicione tarefas para acompanhar o progresso.
-              </span>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+      <ProgressCard
+        title="Progresso do projeto"
+        value={taskMetrics.completed}
+        total={taskMetrics.total}
+      />
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(360px,0.72fr)]">
-        <Card className="border-slate-700 bg-slate-900">
-          <CardHeader className="border-b border-slate-700">
-            <div className="flex items-center gap-3">
-              <div className="flex size-11 items-center justify-center rounded-xl bg-indigo-500/15 text-indigo-300">
-                <PencilLine className="size-5" />
-              </div>
-
-              <div>
-                <CardTitle className="text-white">
-                  Informações do projeto
-                </CardTitle>
-
-                <CardDescription className="text-slate-300">
-                  Atualize os dados principais.
-                </CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-
-          <CardContent>
+        <AppSection
+          title="Informações do projeto"
+          description="Atualize os dados principais."
+          icon={<PencilLine />}
+        >
             <form
               onSubmit={handleUpdate}
               className="flex flex-col gap-5"
@@ -737,42 +678,32 @@ export default function ProjectDetailsPage() {
                 </Button>
               </div>
             </form>
-          </CardContent>
-        </Card>
+        </AppSection>
 
-        <Card className="border-slate-700 bg-slate-900">
-          <CardHeader className="border-b border-slate-700">
-            <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
-              <div>
-                <CardTitle className="text-white">
-                  Tarefas do projeto
-                </CardTitle>
+        <AppSection
+          title="Tarefas do projeto"
+          description={`${taskMetrics.total} ${
+            taskMetrics.total === 1
+              ? "tarefa vinculada"
+              : "tarefas vinculadas"
+          }`}
+          icon={<FileText />}
+          action={
+            <div className="flex flex-wrap items-center gap-2">
+              <NewTaskDialog
+                projectId={project.id}
+                onCreated={loadProject}
+              />
 
-                <CardDescription className="text-slate-300">
-                  {taskMetrics.total}{" "}
-                  {taskMetrics.total === 1
-                    ? "tarefa vinculada"
-                    : "tarefas vinculadas"}
-                </CardDescription>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2">
-                <NewTaskDialog
-                  projectId={project.id}
-                  onCreated={loadProject}
-                />
-
-                <Badge
-                  variant="outline"
-                  className="border-slate-600 bg-slate-800 text-white"
-                >
-                  {taskMetrics.progress}% concluído
-                </Badge>
-              </div>
+              <Badge
+                variant="outline"
+                className="border-slate-600 bg-slate-800 text-white"
+              >
+                {taskMetrics.progress}% concluído
+              </Badge>
             </div>
-          </CardHeader>
-
-          <CardContent>
+          }
+        >
             {project.tasks.length === 0 ? (
               <EmptyTasksState />
             ) : (
@@ -787,50 +718,9 @@ export default function ProjectDetailsPage() {
                 ))}
               </div>
             )}
-          </CardContent>
-        </Card>
+        </AppSection>
       </div>
     </div>
-  );
-}
-
-function MetricCard({
-  title,
-  value,
-  description,
-  icon,
-  iconClassName,
-}: {
-  title: string;
-  value: number;
-  description: string;
-  icon: React.ReactNode;
-  iconClassName: string;
-}) {
-  return (
-    <Card className="border-slate-700 bg-slate-900 shadow-lg shadow-black/10">
-      <CardContent className="flex items-center justify-between gap-4 p-5">
-        <div>
-          <p className="text-sm font-medium text-slate-300">
-            {title}
-          </p>
-
-          <strong className="mt-1 block text-3xl font-bold text-white">
-            {value}
-          </strong>
-
-          <span className="mt-1 block text-xs text-slate-400">
-            {description}
-          </span>
-        </div>
-
-        <div
-          className={`flex size-11 shrink-0 items-center justify-center rounded-xl ${iconClassName} [&_svg]:size-5`}
-        >
-          {icon}
-        </div>
-      </CardContent>
-    </Card>
   );
 }
 
@@ -934,20 +824,12 @@ function getTaskVisual(status: string) {
 
 function EmptyTasksState() {
   return (
-    <div className="flex min-h-72 flex-col items-center justify-center rounded-xl border border-dashed border-slate-700 bg-slate-950/40 p-6 text-center">
-      <div className="mb-4 flex size-14 items-center justify-center rounded-2xl bg-slate-800 text-slate-300">
-        <FileText className="size-7" />
-      </div>
-
-      <h3 className="font-semibold text-white">
-        Nenhuma tarefa neste projeto
-      </h3>
-
-      <p className="mt-2 max-w-sm text-sm leading-6 text-slate-300">
-        Clique em Nova tarefa para adicionar a primeira atividade
-        deste projeto.
-      </p>
-    </div>
+    <EmptyState
+      icon={<FileText />}
+      title="Nenhuma tarefa neste projeto"
+      description="Clique em Nova tarefa para adicionar a primeira atividade deste projeto."
+      className="min-h-72"
+    />
   );
 }
 
@@ -1046,26 +928,6 @@ function TaskStatusBadge({
       <CircleDashed />
       {status || "Pendente"}
     </Badge>
-  );
-}
-
-function ProjectLoadingState() {
-  return (
-    <div className="mx-auto flex min-h-[60vh] w-full max-w-7xl items-center justify-center">
-      <div className="flex flex-col items-center gap-3 text-center">
-        <LoaderCircle className="size-9 animate-spin text-indigo-400" />
-
-        <div>
-          <p className="font-semibold text-white">
-            Carregando projeto
-          </p>
-
-          <p className="mt-1 text-sm text-slate-300">
-            Aguarde enquanto buscamos os dados da API.
-          </p>
-        </div>
-      </div>
-    </div>
   );
 }
 
